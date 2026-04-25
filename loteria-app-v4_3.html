@@ -1,0 +1,3647 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lotería Pro">
+<title>Lotería Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3d;
+    --gold: #f0c040;
+    --gold2: #e8a020;
+    --green: #30d060;
+    --red: #f05050;
+    --blue: #4090ff;
+    --purple: #a070ff;
+    --text: #e8e8f0;
+    --muted: #6868a0;
+    --radius: 14px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100dvh; overflow-x:hidden; padding-bottom:86px; font-size:14px; }
+
+  /* HEADER simplificado */
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 16px; position:sticky; top:0; z-index:100; }
+  .header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .logo { font-family:'DM Serif Display',serif; font-size:22px; background:linear-gradient(135deg,var(--gold),var(--gold2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .logo span { font-style:italic; }
+  .header-sub { font-size:11px; color:var(--muted); margin-top:1px; }
+  .header-actions { display:flex; align-items:center; gap:6px; }
+  .icon-btn { background:var(--surface2); border:1px solid var(--border); color:var(--muted); border-radius:8px; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-family:inherit; }
+  .icon-btn.connected { color:var(--green); border-color:rgba(48,208,96,0.3); background:rgba(48,208,96,0.08); }
+  .icon-btn svg { width:16px; height:16px; }
+
+  .sorteo-bar { display:flex; align-items:center; justify-content:space-between; background:rgba(240,192,64,0.06); border:1px solid rgba(240,192,64,0.2); border-radius:10px; padding:8px 12px; }
+  .sorteo-bar-info { flex:1; min-width:0; }
+  .sorteo-bar-label { font-size:12px; font-weight:600; color:var(--gold); }
+  .sorteo-bar-meta { font-size:10px; color:var(--muted); margin-top:1px; display:flex; gap:8px; }
+  .sorteo-new-btn { background:rgba(240,192,64,0.12); border:1px solid rgba(240,192,64,0.25); color:var(--gold); border-radius:8px; padding:6px 10px; font-size:11px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; }
+
+  /* NAV simplificado */
+  .nav { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border); display:grid; grid-template-columns:repeat(5,1fr); z-index:200; padding-bottom:env(safe-area-inset-bottom); }
+  .nav-btn { display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 4px; background:none; border:none; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:10px; cursor:pointer; position:relative; }
+  .nav-btn.active { color:var(--gold); }
+  .nav-btn svg { width:20px; height:20px; }
+  .nav-btn.active::after { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:28px; height:2px; background:var(--gold); border-radius:0 0 2px 2px; }
+
+  .screen { display:none; padding:16px; animation:fadeUp .2s ease; }
+  .screen.active { display:block; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+
+  /* CARDS simplificados */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:12px; }
+  .card-title { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; font-weight:500; }
+
+  /* STATS grid simplificado */
+  .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
+  .stat-label { font-size:10px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+  .stat-value { font-family:'DM Mono',monospace; font-size:20px; font-weight:500; }
+  .stat-value.gold { color:var(--gold); }
+  .stat-value.green { color:var(--green); }
+  .stat-value.blue { color:var(--blue); }
+  .stat-value.purple { color:var(--purple); }
+
+  /* FACTURA items */
+  .fitem-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); gap:6px; }
+  .fitem-row:last-of-type { border-bottom:none; }
+  .fitem-left { display:flex; align-items:center; gap:6px; flex:1; min-width:0; }
+  .fitem-right { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+  .fitem-num { font-family:'DM Mono',monospace; font-size:16px; color:var(--gold); min-width:48px; }
+  .fitem-qty { font-size:13px; color:var(--muted); }
+  .fitem-price { font-family:'DM Mono',monospace; font-size:13px; color:var(--green); }
+  .fitem-edit-btn { background:rgba(64,144,255,0.1); border:1px solid rgba(64,144,255,0.2); color:var(--blue); border-radius:6px; padding:4px 8px; font-size:13px; cursor:pointer; }
+  .fitem-del-btn { background:rgba(240,80,80,0.1); border:1px solid rgba(240,80,80,0.2); color:var(--red); border-radius:6px; width:28px; height:28px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:600; }
+
+  /* FACTURA cards in history */
+  .factura-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:10px; overflow:hidden; }
+  .factura-card.winner-factura { border-color:rgba(240,192,64,0.35); }
+  .factura-card-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:pointer; gap:10px; }
+  .factura-card-header:active { background:rgba(255,255,255,0.03); }
+  .factura-card-body { padding:0 14px 12px; border-top:1px solid var(--border); }
+
+  /* TYPE TOGGLE simplificado */
+  .type-toggle { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+  .toggle-btn { padding:12px 10px; border-radius:10px; border:1.5px solid var(--border); background:var(--surface2); color:var(--muted); font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer; transition:all .15s; text-align:center; }
+  .toggle-btn .t-name { display:block; font-size:15px; }
+  .toggle-btn .t-price { font-family:'DM Mono',monospace; font-size:11px; font-weight:400; display:block; margin-top:2px; opacity:.7; }
+  .toggle-btn.active.vil { border-color:var(--purple); background:rgba(160,112,255,0.12); color:var(--purple); }
+  .toggle-btn.active.billete { border-color:var(--gold); background:rgba(240,192,64,0.10); color:var(--gold); }
+
+  /* FORM */
+  .form-group { margin-bottom:12px; }
+  .form-group:last-child { margin-bottom:0; }
+  .hint { font-size:11px; color:var(--muted); margin-top:4px; line-height:1.4; }
+  label { display:block; font-size:11px; color:var(--muted); letter-spacing:.5px; text-transform:uppercase; margin-bottom:6px; font-weight:500; }
+  input, select { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'DM Mono',monospace; font-size:18px; padding:12px 14px; outline:none; transition:border-color .15s; -webkit-appearance:none; }
+  input[type="text"], select { letter-spacing:0; font-family:'DM Sans',sans-serif; }
+  input:focus, select:focus { border-color:var(--gold); }
+
+  /* PARSED PREVIEW */
+  .parsed-preview { display:none; border-radius:10px; overflow:hidden; border:1px solid var(--border); margin-bottom:12px; }
+  .parsed-preview.visible { display:flex; }
+  .parsed-part { flex:1; padding:10px 14px; text-align:center; }
+  .parsed-part:first-child { border-right:1px solid var(--border); }
+  .parsed-part-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+  .parsed-part-value { font-family:'DM Mono',monospace; font-size:18px; font-weight:500; }
+  .parsed-part-value.num { color:var(--gold); }
+  .parsed-part-value.num.vil { color:var(--purple); }
+  .parsed-part-value.qty { color:var(--green); }
+
+  /* BUTTONS simplificados */
+  .btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:13px; border-radius:10px; border:none; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:600; cursor:pointer; transition:transform .1s; }
+  .btn:active { transform:scale(0.98); }
+  .btn-gold { background:linear-gradient(135deg,var(--gold),var(--gold2)); color:#0a0a0f; }
+  .btn-outline { background:transparent; border:1px solid var(--border); color:var(--text); }
+  .btn-green { background:rgba(48,208,96,0.1); border:1px solid rgba(48,208,96,0.3); color:var(--green); }
+  .btn-blue { background:rgba(64,144,255,0.1); border:1px solid rgba(64,144,255,0.3); color:var(--blue); }
+  .btn-red { background:rgba(240,80,80,0.1); border:1px solid rgba(240,80,80,0.3); color:var(--red); }
+  .btn-purple { background:rgba(160,112,255,0.1); border:1px solid rgba(160,112,255,0.3); color:var(--purple); }
+  .btn-red-sm { background:none; border:none; color:var(--red); font-size:18px; cursor:pointer; padding:4px; line-height:1; flex-shrink:0; }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* FACTURA / CART */
+  .factura-empty { text-align:center; padding:20px; color:var(--muted); font-size:13px; border:1px dashed var(--border); border-radius:10px; margin-bottom:12px; }
+  .cart-item { display:flex; align-items:center; gap:10px; background:var(--surface2); border-radius:10px; padding:10px 12px; margin-bottom:6px; border:1px solid var(--border); }
+  .cart-num { font-family:'DM Mono',monospace; font-size:17px; color:var(--gold); min-width:52px; }
+  .cart-info { flex:1; }
+  .cart-detail { font-size:11px; color:var(--muted); margin-top:2px; }
+  .cart-price { font-family:'DM Mono',monospace; font-size:14px; color:var(--green); }
+
+  /* FACTURA total bar */
+  .factura-bar { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+  .factura-bar-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:12px; color:var(--muted); }
+  .factura-bar-row:last-child { margin-bottom:0; }
+  .factura-bar-total { display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:10px; margin-top:8px; }
+  .factura-bar-total-label { font-size:13px; color:var(--text); font-weight:600; }
+  .factura-bar-total-amount { font-family:'DM Mono',monospace; font-size:20px; color:var(--green); font-weight:500; }
+
+  /* TICKET items */
+  .ticket-item { display:flex; align-items:center; gap:12px; background:var(--surface2); border-radius:10px; padding:10px 12px; margin-bottom:6px; border:1px solid transparent; }
+  .ticket-item.winner { border-color:rgba(240,192,64,0.4); background:rgba(240,192,64,0.06); }
+  .ticket-num { font-family:'DM Mono',monospace; font-size:18px; font-weight:500; color:var(--gold); min-width:58px; }
+  .ticket-info { flex:1; }
+  .ticket-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+  .ticket-price { font-family:'DM Mono',monospace; font-size:14px; color:var(--green); font-weight:500; }
+  .winner-badge { font-size:10px; background:linear-gradient(135deg,var(--gold),var(--gold2)); color:#0a0a0f; border-radius:5px; padding:2px 7px; font-weight:700; letter-spacing:.5px; }
+  .type-chip { display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:5px; letter-spacing:.5px; }
+  .type-chip.vil { background:rgba(160,112,255,0.18); color:var(--purple); }
+  .type-chip.billete { background:rgba(240,192,64,0.18); color:var(--gold); }
+
+  .search-box { position:relative; margin-bottom:12px; }
+  .search-box input { font-size:14px; letter-spacing:0; padding:11px 14px 11px 38px; font-family:'DM Sans',sans-serif; }
+  .search-box svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); width:16px; height:16px; }
+
+  .filter-row { display:flex; gap:6px; margin-bottom:12px; overflow-x:auto; padding-bottom:2px; }
+  .filter-chip { flex-shrink:0; padding:5px 12px; border-radius:16px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:12px; cursor:pointer; font-family:inherit; }
+  .filter-chip.active { background:rgba(240,192,64,0.1); border-color:rgba(240,192,64,0.3); color:var(--gold); }
+
+  .section-title { font-family:'DM Serif Display',serif; font-size:22px; margin-bottom:4px; }
+  .section-sub { font-size:12px; color:var(--muted); margin-bottom:14px; }
+  .empty-state { text-align:center; padding:40px 20px; color:var(--muted); }
+  .empty-state-icon { font-size:40px; opacity:.3; margin-bottom:10px; }
+  .divider { height:1px; background:var(--border); margin:12px 0; }
+
+  /* RESUMEN tables */
+  .tbl-hd { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; text-align:center; padding:4px 2px; }
+  .tbl-val { font-family:'DM Mono',monospace; font-size:13px; color:var(--text); text-align:center; padding:6px 2px; background:var(--surface2); border-radius:6px; }
+  .tbl-val.gold { color:var(--gold); }
+  .tbl-val.green { color:var(--green); }
+  .tbl-val.purple { color:var(--purple); }
+  .tbl-val.red { color:var(--red); }
+  .tbl-label { font-size:11px; color:var(--muted); display:flex; align-items:center; padding:4px 0; }
+  .tbl-edit { background:var(--surface2); border-radius:6px; padding:2px; }
+
+  /* Collapsible section (Chance / Billete) */
+  .collapsible { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:12px; }
+  .collapsible-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:pointer; background:var(--surface); }
+  .collapsible-header:active { background:var(--surface2); }
+  .collapsible-title { font-family:'DM Serif Display',serif; font-size:15px; }
+  .collapsible-title.purple { color:var(--purple); }
+  .collapsible-title.gold { color:var(--gold); }
+  .collapsible-chevron { transition:transform .2s; color:var(--muted); }
+  .collapsible.open .collapsible-chevron { transform:rotate(180deg); }
+  .collapsible-body { display:none; padding:12px 14px; border-top:1px solid var(--border); background:var(--surface); }
+  .collapsible.open .collapsible-body { display:block; }
+
+  .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:10px 18px; font-size:13px; z-index:999; opacity:0; transition:all .3s; white-space:nowrap; pointer-events:none; max-width:90vw; overflow:hidden; text-overflow:ellipsis; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.success { border-color:rgba(48,208,96,0.4); color:var(--green); }
+  .toast.error { border-color:rgba(240,80,80,0.4); color:var(--red); }
+
+  /* MODALS */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:600; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(4px); }
+  .modal-overlay.open { display:flex; }
+  .modal-sheet { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:500; align-items:flex-end; justify-content:center; display:none; backdrop-filter:blur(4px); }
+  .modal-sheet.open { display:flex; }
+  .modal-content { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px 18px; width:100%; max-width:360px; }
+  .modal-sheet-content { background:var(--surface); border:1px solid var(--border); border-radius:18px 18px 0 0; padding:20px 18px 30px; width:100%; max-width:480px; max-height:88vh; overflow-y:auto; animation:fadeUp .2s ease; }
+  .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title { font-family:'DM Serif Display',serif; font-size:18px; }
+  .modal-close { background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; width:32px; height:32px; font-size:16px; cursor:pointer; }
+  .modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+  /* QR SCANNER */
+  .scanner-wrap { position:relative; width:100%; aspect-ratio:1/1; max-height:60vh; background:#000; border-radius:12px; overflow:hidden; margin-bottom:12px; }
+  .scanner-wrap video { width:100%; height:100%; object-fit:cover; display:block; }
+  .scanner-wrap canvas { display:none; }
+  .scanner-frame { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:70%; aspect-ratio:1/1; border:2px solid var(--gold); border-radius:10px; box-shadow:0 0 0 9999px rgba(0,0,0,0.45); pointer-events:none; }
+  .scanner-hint { text-align:center; color:var(--muted); font-size:12px; margin-bottom:10px; }
+</style>
+<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="logo">Lotería <span>Pro</span></div>
+      <div class="header-sub">Sistema de Ventas</div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="btn-printer" onclick="togglePrinter()" title="Impresora Bluetooth">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="sorteo-bar">
+    <div class="sorteo-bar-info">
+      <div class="sorteo-bar-label" id="sorteo-label">Cargando...</div>
+      <div class="sorteo-bar-meta">
+        <span id="sorteo-id"></span>
+        <span id="sorteo-cierre"></span>
+      </div>
+    </div>
+    <button class="sorteo-new-btn" id="btn-nuevo-sorteo" onclick="closeSorteoAndNew()">Nuevo sorteo ›</button>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Recaudado</div>
+      <div class="stat-value gold" id="stat-total">$0.00</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Facturas</div>
+      <div class="stat-value blue" id="stat-count">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Viles</div>
+      <div class="stat-value purple" id="stat-viles">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Billetes</div>
+      <div class="stat-value green" id="stat-billetes">0</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Números vendidos</span>
+      <div style="display:flex;gap:4px;">
+        <button id="hn-tab-vil"     onclick="setHomeNumsTab('vil')"     class="filter-chip active" style="padding:4px 10px;font-size:11px;">Chance</button>
+        <button id="hn-tab-billete" onclick="setHomeNumsTab('billete')" class="filter-chip" style="padding:4px 10px;font-size:11px;">Billete</button>
+      </div>
+    </div>
+    <div id="home-nums-acumulado" style="color:var(--muted);font-size:13px;text-align:center;padding:14px 0;">Sin ventas aún</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Números Ganadores</div>
+    <div id="home-winners-list"><div style="color:var(--muted);font-size:13px;">No hay números ganadores definidos</div></div>
+  </div>
+
+  <!-- CHANCE (VILES) - Collapsible -->
+  <div class="collapsible" id="col-chance">
+    <div class="collapsible-header" onclick="toggleCollapsible('col-chance')">
+      <div class="collapsible-title purple">Chance <span style="font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif;font-style:normal;margin-left:6px;" id="ch-summary"></span></div>
+      <svg class="collapsible-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="collapsible-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-bottom:8px;">
+        <div class="tbl-hd">Pedazos</div>
+        <div class="tbl-hd">Total</div>
+        <div class="tbl-hd">Comisión</div>
+        <div class="tbl-hd">Neto</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-bottom:14px;">
+        <div class="tbl-val purple" id="ch-pedazos">0</div>
+        <div class="tbl-val" id="ch-total">$0.00</div>
+        <div class="tbl-val tbl-edit">
+          <input type="number" id="ch-comision" value="0" min="0" oninput="renderResumen()" style="font-size:13px;padding:4px 6px;letter-spacing:0;text-align:center;background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;width:100%;color:var(--text);">
+        </div>
+        <div class="tbl-val green" id="ch-neto">$0.00</div>
+      </div>
+
+      <div style="background:rgba(240,192,64,0.08);border:1px solid rgba(240,192,64,0.2);border-radius:8px;padding:6px;text-align:center;font-size:10px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Premiación</div>
+
+      <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:4px;margin-bottom:6px;">
+        <div class="tbl-hd"></div>
+        <div class="tbl-hd">Premio</div>
+        <div class="tbl-hd">Pedazos</div>
+        <div class="tbl-hd">Total</div>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:4px;margin-bottom:4px;">
+        <div class="tbl-label">🥇 1ro</div>
+        <div class="tbl-val gold" id="ch-p1-premio">$14</div>
+        <div class="tbl-val" id="ch-p1-qty">0</div>
+        <div class="tbl-val green" id="ch-p1-total">$0</div>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:4px;margin-bottom:4px;">
+        <div class="tbl-label">🥈 2do</div>
+        <div class="tbl-val gold" id="ch-p2-premio">$3</div>
+        <div class="tbl-val" id="ch-p2-qty">0</div>
+        <div class="tbl-val green" id="ch-p2-total">$0</div>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:4px;margin-bottom:10px;">
+        <div class="tbl-label">🥉 3ro</div>
+        <div class="tbl-val gold" id="ch-p3-premio">$2</div>
+        <div class="tbl-val" id="ch-p3-qty">0</div>
+        <div class="tbl-val green" id="ch-p3-total">$0</div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px;margin-bottom:6px;">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Total ganado</span>
+        <span class="tbl-val gold" id="ch-total-ganado">$0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Pérd./Ganancia</span>
+        <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:600;" id="ch-pyg">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BILLETE - Collapsible -->
+  <div class="collapsible" id="col-billete">
+    <div class="collapsible-header" onclick="toggleCollapsible('col-billete')">
+      <div class="collapsible-title gold">Billete <span style="font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif;font-style:normal;margin-left:6px;" id="bl-summary"></span></div>
+      <svg class="collapsible-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="collapsible-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-bottom:8px;">
+        <div class="tbl-hd">Pedazos</div>
+        <div class="tbl-hd">Total</div>
+        <div class="tbl-hd">Comisión</div>
+        <div class="tbl-hd">Neto</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-bottom:14px;">
+        <div class="tbl-val gold" id="bl-pedazos">0</div>
+        <div class="tbl-val" id="bl-total">$0.00</div>
+        <div class="tbl-val tbl-edit">
+          <input type="number" id="bl-comision" value="0" min="0" oninput="renderResumen()" style="font-size:13px;padding:4px 6px;letter-spacing:0;text-align:center;background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;width:100%;color:var(--text);">
+        </div>
+        <div class="tbl-val green" id="bl-neto">$0.00</div>
+      </div>
+
+      <div style="background:rgba(240,192,64,0.08);border:1px solid rgba(240,192,64,0.2);border-radius:8px;padding:6px;text-align:center;font-size:10px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Premiación</div>
+
+      <div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr;gap:3px;margin-bottom:6px;">
+        <div class="tbl-hd"></div>
+        <div class="tbl-hd">4 cif.</div>
+        <div class="tbl-hd">3 cif.</div>
+        <div class="tbl-hd">2 cif.</div>
+        <div class="tbl-hd">1 cif.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr;gap:3px;margin-bottom:4px;">
+        <div class="tbl-label">🥇 1ro</div>
+        <div class="tbl-val" id="bl-1st-4c">0|0</div>
+        <div class="tbl-val" id="bl-1st-3c">0|0</div>
+        <div class="tbl-val" id="bl-1st-2c">0|0</div>
+        <div class="tbl-val" id="bl-1st-1c">0|0</div>
+      </div>
+      <div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr;gap:3px;margin-bottom:4px;">
+        <div class="tbl-label">🥈 2do</div>
+        <div class="tbl-val" id="bl-2nd-4c">0|0</div>
+        <div class="tbl-val" id="bl-2nd-3c">0|0</div>
+        <div class="tbl-val" id="bl-2nd-2c">0|0</div>
+        <div class="tbl-val" style="color:var(--muted);font-size:11px;">—</div>
+      </div>
+      <div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 1fr;gap:3px;margin-bottom:10px;">
+        <div class="tbl-label">🥉 3ro</div>
+        <div class="tbl-val" id="bl-3rd-4c">0|0</div>
+        <div class="tbl-val" id="bl-3rd-3c">0|0</div>
+        <div class="tbl-val" id="bl-3rd-2c">0|0</div>
+        <div class="tbl-val" style="color:var(--muted);font-size:11px;">—</div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px;margin-bottom:6px;">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Total ganado</span>
+        <span class="tbl-val gold" id="bl-total-ganado">$0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Pérd./Ganancia</span>
+        <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:600;" id="bl-pyg">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOTAL GENERAL -->
+  <div class="card" style="background:rgba(240,80,80,0.04);border-color:rgba(240,80,80,0.18);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Ganancia/Pérdida total</span>
+      <span style="font-family:'DM Mono',monospace;font-size:17px;font-weight:600;" id="res-total-pyg">$0.00</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Reclamado</span>
+      <span style="font-family:'DM Mono',monospace;font-size:14px;color:var(--red);" id="res-reclamado">$0</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Pendiente</span>
+      <span style="font-family:'DM Mono',monospace;font-size:14px;color:var(--gold);" id="res-pendiente">$0</span>
+    </div>
+  </div>
+</div>
+
+<!-- VENDER -->
+<div id="screen-sell" class="screen">
+  <div class="section-title">Nueva Venta</div>
+  <div class="section-sub">Agrega los números y confirma</div>
+
+  <!-- AVISO: sin sorteo activo -->
+  <div id="sell-no-sorteo-notice" style="display:none;">
+    <div class="card" style="text-align:center;padding:30px 20px;background:rgba(255,69,58,0.06);border:1px solid rgba(255,69,58,0.3);">
+      <div style="font-size:44px;margin-bottom:12px;">📭</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:8px;">No hay sorteo activo</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:18px;">
+        Necesitas abrir un sorteo antes de poder vender o facturar.
+      </div>
+      <button class="btn btn-gold" onclick="closeSorteoAndNew()" style="max-width:280px;margin:0 auto;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+        Abrir nuevo sorteo
+      </button>
+    </div>
+  </div>
+
+  <!-- ZONA DE VENTA (solo si sorteo activo) -->
+  <div id="sell-active-zone">
+
+  <!-- COUNTDOWN: tiempo restante para cierre del sorteo -->
+  <div id="sell-countdown-card" class="card" style="display:none;padding:14px 16px;margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Cierre del sorteo</div>
+        <div id="sell-countdown-time" style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;line-height:1;color:var(--text);"></div>
+        <div id="sell-countdown-when" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+      </div>
+      <div id="sell-countdown-icon" style="flex-shrink:0;">
+        <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--gold);"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 1h6"/></svg>
+      </div>
+    </div>
+    <div id="sell-countdown-bar" style="margin-top:10px;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;">
+      <div id="sell-countdown-bar-fill" style="height:100%;width:100%;background:linear-gradient(90deg,var(--gold),var(--green));transition:width 1s linear;"></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+    <button class="btn btn-outline" onclick="openScannerModal('sell')" style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;padding:10px 6px;">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14h2M14 19v2M19 19h2v2h-2z"/></svg>
+      Escanear QR
+    </button>
+    <button class="btn btn-outline" onclick="openLookupModal('sell')" style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;padding:10px 6px;">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Buscar N° factura
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Factura actual</div>
+    <div id="cart-items-list">
+      <div class="factura-empty">Aún no has agregado ningún número</div>
+    </div>
+
+    <div id="factura-bar" style="display:none;">
+      <div class="factura-bar">
+        <div class="factura-bar-row">
+          <span>Chances</span>
+          <span id="fb-viles">—</span>
+        </div>
+        <div class="factura-bar-row">
+          <span>Billetes</span>
+          <span id="fb-billetes">—</span>
+        </div>
+        <div class="factura-bar-total">
+          <span class="factura-bar-total-label">Total</span>
+          <span class="factura-bar-total-amount" id="fb-total">$0.00</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="btn btn-outline" onclick="clearCart()">Limpiar</button>
+        <button class="btn btn-gold" id="f-btn-confirm" onclick="confirmFactura()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="type-toggle">
+      <button class="toggle-btn vil active" id="f-btn-vil" onclick="setFType('vil')">
+        <span class="t-name">Chance</span>
+        <span class="t-price">$0.25 c/u</span>
+      </button>
+      <button class="toggle-btn billete" id="f-btn-billete" onclick="setFType('billete')">
+        <span class="t-name">Billete</span>
+        <span class="t-price">$1.00 c/u</span>
+      </button>
+    </div>
+    <div class="form-group">
+      <label id="f-input-label">Número + cantidad</label>
+      <input type="number" id="f-inp-number" placeholder="Ej: 1205" oninput="onFInput()" onkeydown="onFKeydown(event)" inputmode="numeric">
+      <div class="hint" id="f-inp-hint">2 primeros dígitos = número · El resto = cantidad · Enter para agregar</div>
+    </div>
+    <div class="parsed-preview" id="f-parsed-preview">
+      <div class="parsed-part">
+        <div class="parsed-part-label">Número</div>
+        <div class="parsed-part-value num" id="f-parsed-num">—</div>
+      </div>
+      <div class="parsed-part">
+        <div class="parsed-part-label">Cantidad</div>
+        <div class="parsed-part-value qty" id="f-parsed-qty">—</div>
+      </div>
+    </div>
+    <button class="btn btn-outline" id="f-btn-add" onclick="addToCart()" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+      Agregar
+    </button>
+  </div>
+  </div><!-- /sell-active-zone -->
+</div>
+
+<!-- HISTORIAL (con buscar integrado) -->
+<div id="screen-history" class="screen">
+  <div class="section-title">Historial</div>
+  <div class="section-sub">Todos los registros de venta</div>
+
+  <button class="btn btn-outline" onclick="openReportModal()" style="width:100%;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px;">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+    Informe de ventas (sesiones pasadas)
+  </button>
+
+  <div class="search-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="search-input" placeholder="Buscar por número (ej: 12 o 1234)..." oninput="renderHistory()">
+  </div>
+
+  <div class="filter-row">
+    <button class="filter-chip active" onclick="setFilter('all',this)">Todas</button>
+    <button class="filter-chip" onclick="setFilter('vil',this)">Viles</button>
+    <button class="filter-chip" onclick="setFilter('billete',this)">Billetes</button>
+    <button class="filter-chip" onclick="setFilter('winner',this)">Ganadores</button>
+  </div>
+
+  <div id="history-list"></div>
+</div>
+
+<!-- GANADORES -->
+<div id="screen-winners" class="screen">
+  <div class="section-title">Premios</div>
+  <div class="section-sub">Ingresa los 3 premios y calcula los ganadores</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+    <button class="btn btn-outline" onclick="openScannerModal('check')" style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;padding:10px 6px;">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14h2M14 19v2M19 19h2v2h-2z"/></svg>
+      Escanear QR
+    </button>
+    <button class="btn btn-outline" onclick="openLookupModal('check')" style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;padding:10px 6px;">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Buscar N° factura
+    </button>
+  </div>
+
+  <!-- AVISO: sorteo activo (solo se ve si hay sorteo abierto) -->
+  <div id="winners-locked-notice" style="display:none;">
+    <div class="card" style="text-align:center;padding:24px 18px;background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.3);">
+      <div style="font-size:38px;margin-bottom:10px;">🔒</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:17px;margin-bottom:6px;">Sorteo en curso</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.5;">
+        No puedes ingresar los números premiados mientras el sorteo esté activo.<br>
+        Cuando el sorteo se cierre podrás registrar los números ganadores.
+      </div>
+      <div id="winners-locked-info" style="margin-top:14px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:12px;color:var(--muted);"></div>
+    </div>
+  </div>
+
+  <!-- ZONA DE INGRESO DE PREMIOS (solo si sorteo cerrado) -->
+  <div id="winners-input-zone">
+    <div class="card">
+      <div class="card-title">Números premiados</div>
+      <div class="form-group">
+        <label>🥇 Primer Premio</label>
+        <input type="number" id="w-1st" placeholder="Ej: 1234" inputmode="numeric" oninput="onPremioInput()" style="font-size:20px;letter-spacing:3px;">
+      </div>
+      <div class="form-group">
+        <label>🥈 Segundo Premio</label>
+        <input type="number" id="w-2nd" placeholder="Ej: 5678" inputmode="numeric" oninput="onPremioInput()" style="font-size:20px;letter-spacing:3px;">
+      </div>
+      <div class="form-group">
+        <label>🥉 Tercer Premio</label>
+        <input type="number" id="w-3rd" placeholder="Ej: 9012" inputmode="numeric" oninput="onPremioInput()" style="font-size:20px;letter-spacing:3px;">
+      </div>
+    </div>
+
+    <button class="btn btn-gold" onclick="calcularGanadores()" style="margin-bottom:12px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M5 12l5 5L19 7"/></svg>
+      Calcular Ganadores
+    </button>
+  </div>
+
+  <div id="premios-preview" style="display:none;">
+    <div class="card">
+      <div class="card-title">Derivaciones</div>
+      <div id="derivaciones-list"></div>
+    </div>
+  </div>
+
+  <div id="winners-found-list"></div>
+</div>
+
+<!-- CONFIG -->
+<div id="screen-config" class="screen">
+  <div class="section-title">Configuración</div>
+  <div class="section-sub">Ajusta los parámetros de venta y premios</div>
+
+  <!-- VENDEDOR (no protected) -->
+  <div class="card">
+    <div class="card-title">Vendedor</div>
+    <div class="form-group">
+      <label>Nombre del vendedor</label>
+      <input type="text" id="cfg-vendedor" placeholder="Ej: Juan Pérez" oninput="saveConfig()" style="font-size:15px;">
+    </div>
+  </div>
+
+  <!-- IMPRESORA BLUETOOTH -->
+  <div class="card">
+    <div class="card-title">Impresora Bluetooth</div>
+    <div id="printer-status" style="padding:10px 12px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);margin-bottom:10px;font-size:13px;color:var(--muted);">
+      <span id="printer-status-text">Sin impresora conectada</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <button class="btn btn-blue" onclick="connectPrinter()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/></svg>
+        Conectar
+      </button>
+      <button class="btn btn-outline" onclick="disconnectPrinter()">Desconectar</button>
+    </div>
+    <button class="btn btn-purple" onclick="testPrint()">Imprimir prueba</button>
+    <div class="hint" style="margin-top:10px;">Compatible con impresoras térmicas Bluetooth 58mm (ESC/POS). Requiere Chrome/Edge en Android o computadora. No funciona en iOS Safari.</div>
+  </div>
+
+  <!-- Lock screen / protected area -->
+  <div id="cfg-lock-screen">
+    <div class="card" style="text-align:center;padding:30px 20px;">
+      <div style="font-size:40px;margin-bottom:12px;">🔒</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:4px;">Zona Protegida</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:22px;">Ingresa la contraseña para editar comisiones, límites y premios</div>
+      <div style="position:relative;max-width:260px;margin:0 auto 12px;">
+        <input type="password" id="cfg-pwd-input" placeholder="Contraseña"
+          style="font-size:16px;letter-spacing:3px;text-align:center;padding-right:42px;"
+          onkeydown="if(event.key==='Enter')unlockConfig()">
+        <button onclick="togglePwdVisibility()" id="cfg-pwd-eye"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px;">👁️</button>
+      </div>
+      <div id="cfg-pwd-error" style="color:var(--red);font-size:11px;height:16px;margin-bottom:10px;"></div>
+      <button class="btn btn-purple" onclick="unlockConfig()" style="max-width:260px;margin:0 auto;">Desbloquear</button>
+    </div>
+  </div>
+
+  <div id="cfg-protected" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:8px 12px;background:rgba(48,208,96,0.06);border:1px solid rgba(48,208,96,0.2);border-radius:10px;">
+      <div style="font-size:12px;color:var(--green);font-weight:600;">🔓 Desbloqueado</div>
+      <button onclick="lockConfig()" style="background:none;border:1px solid rgba(48,208,96,0.3);color:var(--green);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">Bloquear</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Comisión del vendedor</div>
+      <div class="form-group">
+        <label>Comisión (%)</label>
+        <input type="number" id="cfg-comision-vendedor" placeholder="Ej: 10" min="0" max="100" oninput="saveConfig()" style="font-size:16px;letter-spacing:0;font-family:'DM Sans',sans-serif;">
+        <div class="hint">Porcentaje del ingreso neto que recibe el vendedor</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Precio por pedazo</div>
+      <div class="modal-grid">
+        <div class="form-group">
+          <label>Vil ($)</label>
+          <input type="number" id="cfg-precio-vil" placeholder="0.25" min="0" step="0.05" oninput="saveConfig()" style="font-size:17px;">
+        </div>
+        <div class="form-group">
+          <label>Billete ($)</label>
+          <input type="number" id="cfg-precio-billete" placeholder="1.00" min="0" step="0.25" oninput="saveConfig()" style="font-size:17px;">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Límites de venta</div>
+      <div class="form-group">
+        <label>Límite por número vil</label>
+        <input type="number" id="cfg-limite-vil" placeholder="Ej: 100 (0 = sin límite)" min="0" oninput="saveConfig()" style="font-size:16px;letter-spacing:0;font-family:'DM Sans',sans-serif;">
+      </div>
+      <div class="form-group">
+        <label>Límite por número billete</label>
+        <input type="number" id="cfg-limite-billete" placeholder="Ej: 50 (0 = sin límite)" min="0" oninput="saveConfig()" style="font-size:16px;letter-spacing:0;font-family:'DM Sans',sans-serif;">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Premios de viles (por pedazo)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div class="form-group"><label>🥇 1er</label><input type="number" id="cfg-vil-p1" placeholder="14" min="0" oninput="saveConfig()" style="font-size:17px;"></div>
+        <div class="form-group"><label>🥈 2do</label><input type="number" id="cfg-vil-p2" placeholder="3" min="0" oninput="saveConfig()" style="font-size:17px;"></div>
+        <div class="form-group"><label>🥉 3ro</label><input type="number" id="cfg-vil-p3" placeholder="2" min="0" oninput="saveConfig()" style="font-size:17px;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Premios de billetes (por pedazo)</div>
+
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">🥇 Primer Premio</div>
+      <div class="modal-grid" style="margin-bottom:12px;">
+        <div class="form-group"><label>4 cifras (exacto)</label><input type="number" id="cfg-bl-1st-4c" placeholder="2000" min="0" oninput="saveConfig()" style="font-size:15px;"></div>
+        <div class="form-group"><label>3 pri./últ.</label><input type="number" id="cfg-bl-1st-3c" placeholder="50" min="0" oninput="saveConfig()" style="font-size:15px;"></div>
+        <div class="form-group"><label>2 pri./últ.</label><input type="number" id="cfg-bl-1st-2c" placeholder="3" min="0" oninput="saveConfig()" style="font-size:15px;"></div>
+        <div class="form-group"><label>1 últ.</label><input type="number" id="cfg-bl-1st-1c" placeholder="1" min="0" oninput="saveConfig()" style="font-size:15px;"></div>
+      </div>
+
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">🥈 Segundo Premio</div>
+      <div class="modal-grid" style="margin-bottom:12px;">
+        <div class="form-group"><label>4 cifras</label><input type="number" id="cfg-bl-2nd-4c" placeholder="600" min="0" oninput="saveConfig()" style="font-size:15px;"></div>
+        <div class="form-group"><label>3 pri./últ.</label><input type="number" id="cfg-bl-2nd-3c" placeholder="20" min="0" oninput="saveConfig()" style="font-size:15px;"></div>
+        <div class="form-group"><label>2 últ.</label><input type="number" id="cfg-bl-2nd-2c" placeholder="2" min="0" oninput="saveConfig()" style="font-size:15px;"></div>
+      </div>
+
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">🥉 Tercer Premio</div>
+      <div class="modal-grid">
+        <div class="form-group"><label>4 cifras</label><input type="number" id="cfg-bl-3rd-4c" placeholder="300" min="0" oninput="saveConfig()" style="font-size:15px;"></div>
+        <div class="form-group"><label>3 pri./últ.</label><input type="number" id="cfg-bl-3rd-3c" placeholder="10" min="0" oninput="saveConfig()" style="font-size:15px;"></div>
+        <div class="form-group"><label>2 últ.</label><input type="number" id="cfg-bl-3rd-2c" placeholder="1" min="0" oninput="saveConfig()" style="font-size:15px;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Cambiar contraseña</div>
+      <div class="form-group">
+        <label>Nueva contraseña</label>
+        <input type="password" id="cfg-new-pwd" placeholder="Nueva" style="font-size:15px;letter-spacing:2px;">
+      </div>
+      <div class="form-group">
+        <label>Confirmar</label>
+        <input type="password" id="cfg-new-pwd2" placeholder="Repetir" style="font-size:15px;letter-spacing:2px;">
+      </div>
+      <button class="btn btn-purple" onclick="changePassword()">Cambiar contraseña</button>
+    </div>
+
+    <div class="card" style="border:1px solid rgba(255,69,58,0.3);background:rgba(255,69,58,0.04);">
+      <div class="card-title" style="color:var(--red);">Zona peligrosa</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px;">
+        Borra <strong>todos los sorteos cerrados</strong> del historial (facturas, ganadores e informes). El sorteo activo se conserva.
+      </div>
+      <button class="btn btn-red" onclick="confirmClearHistory()" style="width:100%;">
+        🗑️ Borrar historial de sesiones
+      </button>
+    </div>
+
+    <button class="btn btn-gold" onclick="saveConfig();showToast('Configuración guardada')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M5 12l5 5L19 7"/></svg>
+      Guardar configuración
+    </button>
+
+    <div class="card" id="cfg-resumen-vendedor" style="display:none;margin-top:12px;">
+      <div class="card-title">Comisión del vendedor — sorteo actual</div>
+      <div id="cfg-vendedor-resumen-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NUEVO SORTEO -->
+<div id="nuevo-sorteo-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Nuevo Sorteo</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">Elige cuándo se cierra automáticamente</div>
+      </div>
+      <button class="modal-close" onclick="closeNuevoSorteoModal()">×</button>
+    </div>
+
+    <div class="form-group">
+      <label>Día del sorteo</label>
+      <div class="modal-grid">
+        <button id="ns-btn-dom" onclick="selectSorteoDay('domingo')" class="toggle-btn" style="padding:14px;">🌞 Domingo</button>
+        <button id="ns-btn-mie" onclick="selectSorteoDay('miercoles')" class="toggle-btn" style="padding:14px;">🌙 Miércoles</button>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:18px;">
+      <label>Fecha y hora de cierre</label>
+      <input type="datetime-local" id="ns-cierre" style="font-size:14px;letter-spacing:0;font-family:'DM Sans',sans-serif;">
+      <div class="hint">La app cerrará el sorteo automáticamente</div>
+    </div>
+
+    <div class="modal-grid">
+      <button class="btn btn-outline" onclick="closeNuevoSorteoModal()">Cancelar</button>
+      <button class="btn btn-gold" onclick="confirmarNuevoSorteo()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CONFIRM -->
+<div id="confirm-dialog" class="modal-overlay">
+  <div class="modal-content" style="max-width:320px;">
+    <div id="confirm-msg" style="font-size:14px;line-height:1.5;margin-bottom:18px;text-align:center;"></div>
+    <div class="modal-grid">
+      <button class="btn btn-outline" onclick="closeConfirm(false)">Cancelar</button>
+      <button class="btn btn-red" onclick="closeConfirm(true)">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT ITEM -->
+<div id="edit-modal" class="modal-sheet">
+  <div class="modal-sheet-content">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Editar ítem</div>
+        <div id="modal-fid" style="font-size:11px;color:var(--muted);margin-top:2px;"></div>
+      </div>
+      <button class="modal-close" onclick="closeEditModal()">×</button>
+    </div>
+
+    <div class="type-toggle">
+      <button class="toggle-btn vil active" id="edit-type-vil" onclick="setEditType('vil')">
+        <span class="t-name">Vil</span>
+        <span class="t-price">$0.25 c/u</span>
+      </button>
+      <button class="toggle-btn billete" id="edit-type-billete" onclick="setEditType('billete')">
+        <span class="t-name">Billete</span>
+        <span class="t-price">$1.00 c/u</span>
+      </button>
+    </div>
+
+    <div class="form-group">
+      <label>Número</label>
+      <input type="number" id="edit-number" placeholder="Ej: 12 o 1234" oninput="updateEditTotal()" inputmode="numeric" style="font-size:18px;letter-spacing:2px;">
+      <div id="edit-hint" class="hint"></div>
+    </div>
+
+    <div class="form-group">
+      <label>Cantidad</label>
+      <input type="number" id="edit-qty" value="1" min="1" oninput="updateEditTotal()" inputmode="numeric" style="font-size:18px;">
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+      <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Total</span>
+      <span id="edit-total" style="font-family:'DM Mono',monospace;font-size:20px;color:var(--green);">—</span>
+    </div>
+
+    <button class="btn btn-gold" onclick="saveEditItem()">Guardar cambios</button>
+  </div>
+</div>
+
+<!-- MODAL: BUSCAR FACTURA POR NÚMERO -->
+<div id="lookup-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="lookup-title">Buscar factura</div>
+        <div id="lookup-subtitle" style="font-size:11px;color:var(--muted);margin-top:2px;">Escribe el número de factura</div>
+      </div>
+      <button class="modal-close" onclick="closeLookupModal()">×</button>
+    </div>
+    <div class="form-group">
+      <label>Número de factura</label>
+      <input type="text" id="lookup-input" placeholder="Ej: 123 o F-00123 o 00123"
+             style="font-size:18px;letter-spacing:2px;text-align:center;"
+             oninput="onLookupInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();doLookup();}"
+             inputmode="numeric" autocomplete="off">
+      <div class="hint">Escribe solo el número o con prefijo F- · Enter para buscar</div>
+    </div>
+    <div id="lookup-status" style="min-height:14px;font-size:12px;text-align:center;margin-bottom:10px;color:var(--muted);"></div>
+    <div id="lookup-preview" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:12px;max-height:36vh;overflow-y:auto;"></div>
+    <div class="modal-grid">
+      <button class="btn btn-outline" onclick="closeLookupModal()">Cancelar</button>
+      <button class="btn btn-gold" id="lookup-submit-btn" onclick="doLookup()" disabled>Buscar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: QR SCANNER -->
+<div id="scanner-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="scanner-title">Escanear factura</div>
+        <div class="scanner-hint" id="scanner-subtitle" style="text-align:left;margin-top:2px;margin-bottom:0;">Apunta la cámara al código QR</div>
+      </div>
+      <button class="modal-close" onclick="closeScannerModal()">×</button>
+    </div>
+    <div class="scanner-wrap">
+      <video id="scanner-video" playsinline muted></video>
+      <canvas id="scanner-canvas"></canvas>
+      <div class="scanner-frame"></div>
+    </div>
+    <div id="scanner-status" class="scanner-hint" style="text-align:left;white-space:pre-wrap;max-height:200px;overflow-y:auto;padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">Iniciando cámara...</div>
+    <button class="btn btn-outline" onclick="closeScannerModal()" style="width:100%;margin-top:10px;">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: CHECK RESULT (premio de factura escaneada) -->
+<div id="check-result-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title" id="check-result-title">Resultado</div>
+      <button class="modal-close" onclick="closeCheckResultModal()">×</button>
+    </div>
+    <div id="check-result-body" style="max-height:60vh;overflow-y:auto;"></div>
+    <button class="btn btn-gold" onclick="closeCheckResultModal()" style="width:100%;margin-top:14px;">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL: REPORTE DE VENTAS PASADAS -->
+<div id="report-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width:480px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Informe de ventas</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">Análisis de sesiones cerradas</div>
+      </div>
+      <button class="modal-close" onclick="closeReportModal()">×</button>
+    </div>
+    <div id="report-body" style="max-height:65vh;overflow-y:auto;"></div>
+    <button class="btn btn-gold" onclick="closeReportModal()" style="width:100%;margin-top:14px;">Cerrar</button>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="goTo('home',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Inicio
+  </button>
+  <button class="nav-btn" onclick="goTo('sell',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+    Vender
+  </button>
+  <button class="nav-btn" onclick="goTo('history',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    Historial
+  </button>
+  <button class="nav-btn" onclick="goTo('winners',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    Premios
+  </button>
+  <button class="nav-btn" onclick="goTo('config',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    Config
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PRICES = {
+  get vil()     { return CFG.get().precioVil     || 0.25; },
+  get billete() { return CFG.get().precioBillete || 1.00; }
+};
+const NUM_LEN = { vil: 2, billete: 4 };
+
+// ── DB ────────────────────────────────────────────────
+const DB = {
+  get sorteos() { try { return JSON.parse(localStorage.getItem('lp_s1')||'[]'); } catch(e){return[];} },
+  set sorteos(v) { localStorage.setItem('lp_s1', JSON.stringify(v)); },
+  get activeSorteo() {
+    const s = DB.sorteos;
+    return s.find(x => !x.closed) || null;
+  },
+  get facturas() { return DB.activeSorteo?.facturas || []; },
+  set facturas(v) {
+    const s = DB.sorteos;
+    const idx = s.findIndex(x => !x.closed);
+    if (idx < 0) return;
+    s[idx].facturas = v;
+    DB.sorteos = s;
+  },
+  get winners() { return DB.activeSorteo?.winners || null; },
+  set winners(v) {
+    const s = DB.sorteos;
+    const idx = s.findIndex(x => !x.closed);
+    if (idx < 0) return;
+    s[idx].winners = v;
+    DB.sorteos = s;
+  },
+  get tickets() { return DB.facturas.flatMap(f => f.items.map(i => Object.assign({}, i, {facturaId:f.id, facturaDate:f.date}))); },
+};
+
+// ── CONFIG DB ─────────────────────────────────────────
+const DEFAULT_CONFIG = {
+  vendedor: '',
+  comisionVendedor: 0,
+  precioVil: 0.25,
+  precioBillete: 1.00,
+  limiteVil: 0,
+  limiteBillete: 0,
+  vilPremios: { p1: 14, p2: 3, p3: 2 },
+  billetePremios: {
+    exact1st: 2000, pri3_1st: 50, ult3_1st: 50, pri2_1st: 3, ult2_1st: 3, ult1_1st: 1,
+    exact2nd: 600,  pri3_2nd: 20, ult3_2nd: 20, ult2_2nd: 2,
+    exact3rd: 300,  pri3_3rd: 10, ult3_3rd: 10, ult2_3rd: 1
+  }
+};
+
+const CFG = {
+  get() { try { return Object.assign({}, DEFAULT_CONFIG, JSON.parse(localStorage.getItem('lp_cfg')||'{}')); } catch(e){ return {...DEFAULT_CONFIG}; } },
+  set(v) { localStorage.setItem('lp_cfg', JSON.stringify(v)); }
+};
+
+// ═══════════════════════════════════════════════════════
+// ── QR ENCODE/DECODE FOR FACTURAS ─────────────────────
+// ═══════════════════════════════════════════════════════
+// Compact format: "LP1|<sid>|<fid>|<items>"
+// items = "n,t,q;n,t,q;..." where t is 'v' or 'b'
+// Example: "LP1|s-123|F-5|12,v,3;1234,b,1"
+const FacturaQR = {
+  // Format v2 (compact): "LP2|<sid>|<fid>"
+  // Items are NOT embedded — they are looked up from local DB by fid.
+  // This keeps the QR small/readable even for large facturas.
+  // For backwards compat, we still decode the old "LP1|sid|fid|items" format.
+  encode(factura, sorteo) {
+    if (!factura) return '';
+    const sid = sorteo?.id || '';
+    return `LP2|${sid}|${factura.id}`;
+  },
+  decode(text) {
+    if (!text || typeof text !== 'string') return null;
+    const parts = text.split('|');
+    if (parts.length < 3) return null;
+    const tag = parts[0];
+
+    if (tag === 'LP2') {
+      // New compact format — look up items from DB
+      const [, sid, fid] = parts;
+      const num = (function() {
+        const m = String(fid || '').match(/(\d+)/);
+        return m ? parseInt(m[1], 10) : null;
+      })();
+      if (num == null) return null;
+      // Find factura in DB across all sorteos
+      let factura = null, sorteo = null;
+      for (const s of (DB.sorteos || [])) {
+        const f = (s.facturas || []).find(x => {
+          const m = String(x.id || '').match(/(\d+)/);
+          return m && parseInt(m[1], 10) === num;
+        });
+        if (f) { factura = f; sorteo = s; break; }
+      }
+      if (!factura) {
+        // Found a valid QR but no matching factura in this device's DB
+        return { sid: sid, fid: fid, items: [], _notFound: true };
+      }
+      return {
+        sid: sorteo.id,
+        fid: factura.id,
+        items: (factura.items || []).map(it => ({
+          number: it.number,
+          type: it.type,
+          qty: it.qty
+        }))
+      };
+    }
+
+    if (tag === 'LP1' && parts.length >= 4) {
+      // Legacy format — items embedded
+      const [, sid, fid, itemsStr] = parts;
+      const items = itemsStr.split(';').filter(Boolean).map(s => {
+        const [num, t, q] = s.split(',');
+        return {
+          number: num,
+          type: t === 'v' ? 'vil' : 'billete',
+          qty: parseInt(q, 10) || 1
+        };
+      });
+      return { sid, fid, items };
+    }
+    return null;
+  }
+};
+
+// ═══════════════════════════════════════════════════════
+// ── BLUETOOTH THERMAL PRINTER (ESC/POS) ──────────────
+// ═══════════════════════════════════════════════════════
+const PRINTER = {
+  device: null,
+  characteristic: null,
+  // Common BT printer UUIDs — covers most 58mm thermal printers
+  SERVICES: [
+    '000018f0-0000-1000-8000-00805f9b34fb', // Most common (GP/XP series, Goojprt, MTP, etc.)
+    '0000ff00-0000-1000-8000-00805f9b34fb',
+    '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Some models
+    'e7810a71-73ae-499d-8c15-faa9aef0c3f2'
+  ],
+  CHARACTERISTICS: [
+    '00002af1-0000-1000-8000-00805f9b34fb',
+    '0000ff02-0000-1000-8000-00805f9b34fb',
+    '49535343-8841-43f4-a8d4-ecbe34729bb3',
+    'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f'
+  ],
+  connected: false,
+  
+  async connect() {
+    if (!navigator.bluetooth) {
+      throw new Error('Tu navegador no soporta Bluetooth. Usa Chrome o Edge en Android o computadora.');
+    }
+    try {
+      // Request device with broad filter so user can pick their printer
+      this.device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: this.SERVICES
+      });
+      
+      this.device.addEventListener('gattserverdisconnected', () => {
+        this.connected = false;
+        this.characteristic = null;
+        updatePrinterStatus();
+      });
+      
+      const server = await this.device.gatt.connect();
+      
+      // Try each known service until one works
+      let service = null;
+      for (const uuid of this.SERVICES) {
+        try {
+          service = await server.getPrimaryService(uuid);
+          if (service) break;
+        } catch(e) { /* try next */ }
+      }
+      if (!service) {
+        // Fallback: get all services and find a writable one
+        const services = await server.getPrimaryServices();
+        for (const s of services) {
+          try {
+            const chars = await s.getCharacteristics();
+            for (const c of chars) {
+              if (c.properties.write || c.properties.writeWithoutResponse) {
+                this.characteristic = c;
+                break;
+              }
+            }
+            if (this.characteristic) break;
+          } catch(e) {}
+        }
+      } else {
+        // Find writable characteristic in the matched service
+        for (const uuid of this.CHARACTERISTICS) {
+          try {
+            const c = await service.getCharacteristic(uuid);
+            if (c) { this.characteristic = c; break; }
+          } catch(e) {}
+        }
+        // Fallback: any writable char in service
+        if (!this.characteristic) {
+          const chars = await service.getCharacteristics();
+          for (const c of chars) {
+            if (c.properties.write || c.properties.writeWithoutResponse) {
+              this.characteristic = c;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (!this.characteristic) {
+        throw new Error('No se encontró característica de escritura en la impresora.');
+      }
+      
+      this.connected = true;
+      localStorage.setItem('lp_printer_name', this.device.name || 'Impresora');
+      return true;
+    } catch (err) {
+      this.connected = false;
+      this.characteristic = null;
+      throw err;
+    }
+  },
+  
+  async disconnect() {
+    if (this.device && this.device.gatt.connected) {
+      this.device.gatt.disconnect();
+    }
+    this.device = null;
+    this.characteristic = null;
+    this.connected = false;
+    localStorage.removeItem('lp_printer_name');
+  },
+  
+  async sendRaw(bytes) {
+    if (!this.connected || !this.characteristic) {
+      throw new Error('Impresora no conectada');
+    }
+    // Send in chunks of 150 bytes (safer for BLE MTU)
+    const CHUNK = 150;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      const chunk = bytes.slice(i, i + CHUNK);
+      try {
+        if (this.characteristic.properties.writeWithoutResponse) {
+          await this.characteristic.writeValueWithoutResponse(chunk);
+        } else {
+          await this.characteristic.writeValue(chunk);
+        }
+      } catch (e) {
+        // Some printers need a small delay
+        await new Promise(r => setTimeout(r, 40));
+        await this.characteristic.writeValue(chunk);
+      }
+      // Small delay between chunks
+      await new Promise(r => setTimeout(r, 20));
+    }
+  },
+  
+  // Build ESC/POS command bytes for a factura
+  async buildFacturaBytes(factura, sorteo) {
+    const cfg = CFG.get();
+    const bytes = [];
+    
+    // Helpers
+    const pushStr = (s) => {
+      // Convert to latin-1 (CP437/CP850) friendly: strip accents for maximum compatibility
+      const clean = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      for (let i = 0; i < clean.length; i++) {
+        const code = clean.charCodeAt(i);
+        bytes.push(code < 128 ? code : 0x3F); // '?' fallback
+      }
+    };
+    const pushBytes = (...b) => bytes.push(...b);
+    
+    // Init printer
+    pushBytes(0x1B, 0x40); // ESC @ — reset
+    pushBytes(0x1B, 0x74, 0x00); // select CP437
+    
+    // Header — centered, double height
+    pushBytes(0x1B, 0x61, 0x01); // center
+    pushBytes(0x1D, 0x21, 0x11); // double width + height
+    pushStr('LOTERIA PRO\n');
+    pushBytes(0x1D, 0x21, 0x00); // normal size
+    pushStr('Sistema de Ventas\n');
+    if (cfg.vendedor) {
+      pushStr('Vendedor: ' + cfg.vendedor + '\n');
+    }
+    pushStr('================================\n');
+    
+    // Factura info — left aligned
+    pushBytes(0x1B, 0x61, 0x00); // left
+    pushBytes(0x1B, 0x45, 0x01); // bold on
+    pushStr('Factura: ' + factura.id + '\n');
+    pushBytes(0x1B, 0x45, 0x00); // bold off
+    
+    const d = new Date(factura.date);
+    const pad = n => String(n).padStart(2,'0');
+    pushStr('Fecha: ' + d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+           + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '\n');
+    
+    if (sorteo) {
+      const sLabel = (sorteo.label || '').replace(/[🌞🌙🎯]/g,'').trim();
+      pushStr('Sorteo: ' + sLabel + '\n');
+      if (sorteo.fechaJuego) {
+        const sd = new Date(sorteo.fechaJuego);
+        pushStr('Juego:  ' + sd.getFullYear() + '-' + pad(sd.getMonth()+1) + '-' + pad(sd.getDate()) + '\n');
+      }
+    }
+    pushStr('--------------------------------\n');
+    
+    // Table header
+    pushStr('N.     TIPO    CANT   PRECIO\n');
+    pushStr('--------------------------------\n');
+    
+    // Items
+    factura.items.forEach(item => {
+      const num = item.number.padEnd(6, ' ');
+      const type = item.type.toUpperCase().padEnd(7, ' ');
+      const qty = ('x' + item.qty).padEnd(6, ' ');
+      const price = '$' + item.total.toFixed(2);
+      pushStr(num + ' ' + type + ' ' + qty + ' ' + price + '\n');
+    });
+    
+    pushStr('--------------------------------\n');
+    
+    // Summary by type
+    const viles = factura.items.filter(i=>i.type==='vil');
+    const billetes = factura.items.filter(i=>i.type==='billete');
+    const vilesQty = viles.reduce((s,i)=>s+i.qty,0);
+    const vilesAmt = viles.reduce((s,i)=>s+i.total,0);
+    const billQty = billetes.reduce((s,i)=>s+i.qty,0);
+    const billAmt = billetes.reduce((s,i)=>s+i.total,0);
+    
+    if (vilesQty > 0)    pushStr('Viles:    ' + vilesQty + ' ped.    $' + vilesAmt.toFixed(2) + '\n');
+    if (billQty > 0)     pushStr('Billetes: ' + billQty + ' ped.    $' + billAmt.toFixed(2) + '\n');
+    pushStr('--------------------------------\n');
+    
+    // Total — big
+    const total = factura.items.reduce((s,i)=>s+i.total,0);
+    pushBytes(0x1B, 0x61, 0x01); // center
+    pushBytes(0x1D, 0x21, 0x11); // double size
+    pushStr('TOTAL $' + total.toFixed(2) + '\n');
+    pushBytes(0x1D, 0x21, 0x00); // normal
+    pushBytes(0x1B, 0x61, 0x00); // left
+    
+    // Footer
+    pushStr('\n');
+    pushBytes(0x1B, 0x61, 0x01); // center
+    pushStr('Guarde este recibo\n');
+    pushStr('para reclamar premios\n');
+    pushStr('\n');
+
+    // QR CODE — print raster bitmap
+    try {
+      const qrText = FacturaQR.encode(factura, sorteo);
+      const qrBytes = await this._generateQRRaster(qrText);
+      if (qrBytes && qrBytes.length) {
+        for (const b of qrBytes) bytes.push(b);
+      }
+      pushStr('\n');
+      pushStr(factura.id + '\n');
+    } catch(e) {
+      console.warn('QR generation failed:', e);
+    }
+
+    pushBytes(0x1B, 0x61, 0x00); // back to left
+    pushStr('\n\n\n'); // feed lines
+    
+    // Cut (partial cut — many printers ignore if no cutter)
+    pushBytes(0x1D, 0x56, 0x01);
+    
+    return new Uint8Array(bytes);
+  },
+
+  // Generate QR code as ESC/POS raster bitmap bytes
+  // Uses qrcode-generator (sync, no DOM needed)
+  async _generateQRRaster(text) {
+    if (typeof qrcode === 'undefined') {
+      console.warn('qrcode-generator library not loaded');
+      return null;
+    }
+    try {
+      // typeNumber 0 = auto, errorCorrection 'H' = highest (~30%) — very robust on thermal print.
+      // Since the new QR format is short (just "LP2|sid|fid"), 'H' is fine and produces a low-density QR.
+      const qr = qrcode(0, 'H');
+      qr.addData(text);
+      qr.make();
+      const moduleCount = qr.getModuleCount();
+
+      // 58mm printer = 384 dots wide. Aim for a larger QR (~240px) for better camera readability.
+      const targetSize = 240;
+      const scale = Math.max(2, Math.floor(targetSize / moduleCount));
+      const sizePx = moduleCount * scale;
+      // Round sizePx up to next multiple of 8 for raster byte alignment
+      const widthPx = Math.ceil(sizePx / 8) * 8;
+      const heightPx = sizePx;
+      const widthBytes = widthPx / 8;
+      
+      const raster = new Uint8Array(widthBytes * heightPx);
+      for (let y = 0; y < sizePx; y++) {
+        for (let x = 0; x < sizePx; x++) {
+          const modX = Math.floor(x / scale);
+          const modY = Math.floor(y / scale);
+          if (qr.isDark(modY, modX)) {
+            const byteIdx = y * widthBytes + (x >> 3);
+            const bit = 7 - (x & 7);
+            raster[byteIdx] |= (1 << bit);
+          }
+        }
+      }
+
+      // Build GS v 0 command: print raster bitmap
+      // GS v 0 m xL xH yL yH d1...dk
+      const xL = widthBytes & 0xFF;
+      const xH = (widthBytes >> 8) & 0xFF;
+      const yL = heightPx & 0xFF;
+      const yH = (heightPx >> 8) & 0xFF;
+      const cmd = [0x1D, 0x76, 0x30, 0x00, xL, xH, yL, yH];
+      const out = new Uint8Array(cmd.length + raster.length);
+      out.set(cmd, 0);
+      out.set(raster, cmd.length);
+      return out;
+    } catch(e) {
+      console.warn('QR raster generation error:', e);
+      return null;
+    }
+  },
+  
+  // Text preview for on-screen preview
+  buildFacturaText(factura, sorteo) {
+    const cfg = CFG.get();
+    const pad = n => String(n).padStart(2,'0');
+    const d = new Date(factura.date);
+    let out = '';
+    out += '        LOTERÍA PRO\n';
+    out += '      Sistema de Ventas\n';
+    if (cfg.vendedor) out += '   Vendedor: ' + cfg.vendedor + '\n';
+    out += '================================\n';
+    out += 'Factura: ' + factura.id + '\n';
+    out += 'Fecha: ' + d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+         + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '\n';
+    if (sorteo) {
+      out += 'Sorteo: ' + (sorteo.label || '').replace(/[🌞🌙🎯]/g,'').trim() + '\n';
+    }
+    out += '--------------------------------\n';
+    out += 'N.     TIPO    CANT   PRECIO\n';
+    out += '--------------------------------\n';
+    factura.items.forEach(item => {
+      const num = item.number.padEnd(6, ' ');
+      const type = item.type.toUpperCase().padEnd(7, ' ');
+      const qty = ('x' + item.qty).padEnd(6, ' ');
+      const price = '$' + item.total.toFixed(2);
+      out += num + ' ' + type + ' ' + qty + ' ' + price + '\n';
+    });
+    out += '--------------------------------\n';
+    const viles = factura.items.filter(i=>i.type==='vil');
+    const billetes = factura.items.filter(i=>i.type==='billete');
+    const vilesQty = viles.reduce((s,i)=>s+i.qty,0);
+    const vilesAmt = viles.reduce((s,i)=>s+i.total,0);
+    const billQty = billetes.reduce((s,i)=>s+i.qty,0);
+    const billAmt = billetes.reduce((s,i)=>s+i.total,0);
+    if (vilesQty > 0) out += 'Viles:    ' + vilesQty + ' ped.    $' + vilesAmt.toFixed(2) + '\n';
+    if (billQty > 0)  out += 'Billetes: ' + billQty + ' ped.    $' + billAmt.toFixed(2) + '\n';
+    out += '--------------------------------\n';
+    const total = factura.items.reduce((s,i)=>s+i.total,0);
+    out += '          TOTAL  $' + total.toFixed(2) + '\n';
+    out += '\n       Guarde este recibo\n';
+    out += '     para reclamar premios\n';
+    return out;
+  },
+  
+  async printFactura(factura, sorteo) {
+    if (!this.connected) throw new Error('Impresora no conectada');
+    const bytes = await this.buildFacturaBytes(factura, sorteo);
+    await this.sendRaw(bytes);
+  },
+  
+  async printTest() {
+    if (!this.connected) throw new Error('Impresora no conectada');
+    const bytes = [];
+    bytes.push(0x1B, 0x40); // reset
+    bytes.push(0x1B, 0x61, 0x01); // center
+    bytes.push(0x1D, 0x21, 0x11); // double
+    'PRUEBA\n'.split('').forEach(c => bytes.push(c.charCodeAt(0)));
+    bytes.push(0x1D, 0x21, 0x00); // normal
+    'Lotería Pro\n'.split('').forEach(c => bytes.push(c.charCodeAt(0) < 128 ? c.charCodeAt(0) : 0x3F));
+    '================================\n'.split('').forEach(c => bytes.push(c.charCodeAt(0)));
+    'Impresora conectada correctamente\n'.split('').forEach(c => bytes.push(c.charCodeAt(0) < 128 ? c.charCodeAt(0) : 0x3F));
+    ('Fecha: ' + new Date().toLocaleString() + '\n').split('').forEach(c => bytes.push(c.charCodeAt(0) < 128 ? c.charCodeAt(0) : 0x3F));
+    '\n\n\n'.split('').forEach(c => bytes.push(c.charCodeAt(0)));
+    await this.sendRaw(new Uint8Array(bytes));
+  }
+};
+
+// ═══════════════════════════════════════════════════════
+// ── QR SCANNER (camera + jsQR) ───────────────────────
+// ═══════════════════════════════════════════════════════
+const SCANNER = {
+  stream: null,
+  video: null,
+  canvas: null,
+  ctx: null,
+  running: false,
+  rafId: null,
+  mode: null, // 'sell' or 'check'
+
+  async start(mode) {
+    if (typeof jsQR === 'undefined') {
+      throw new Error('Librería jsQR no cargada. Asegúrate de tener conexión a internet al abrir la app por primera vez, o que el navegador permita scripts externos.');
+    }
+    // SECURE CONTEXT CHECK — getUserMedia REQUIRES https://, file://, or localhost
+    if (typeof window.isSecureContext !== 'undefined' && !window.isSecureContext) {
+      throw new Error(
+        'La cámara solo funciona en sitios seguros (HTTPS).\n\n' +
+        'La URL actual es: ' + window.location.protocol + '//' + window.location.host + '\n\n' +
+        'Solución: sube este HTML a Netlify Drop, GitHub Pages, o Cloudflare Pages (gratis y dan HTTPS automático). También funciona si lo abres con file:// pero con limitaciones.'
+      );
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Tu navegador no soporta cámara. Usa Chrome/Edge y asegúrate de servir por HTTPS (no http:// regular).');
+    }
+    this.mode = mode;
+    this.video = document.getElementById('scanner-video');
+    this.canvas = document.getElementById('scanner-canvas');
+    this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+
+    // Request rear camera preferentially
+    let lastError = null;
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false
+      });
+    } catch(e) {
+      lastError = e;
+      console.warn('Falló cámara trasera, probando cualquier cámara:', e);
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        lastError = null;
+      } catch(e2) {
+        lastError = e2;
+      }
+    }
+    if (lastError) {
+      // Distinguish error types for better diagnostic
+      const name = lastError.name || '';
+      let msg;
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
+        msg = 'Permiso de cámara denegado.\n\n'
+          + 'Posibles causas:\n'
+          + '1) El navegador no tiene permiso. En Chrome Android: ⓘ junto a la URL → Permisos → Cámara → Permitir, luego recarga.\n'
+          + '2) Android le quitó el permiso a Chrome. Ve a Ajustes Android → Apps → Chrome → Permisos → Cámara → Permitir.\n'
+          + '3) Otra app está usando la cámara (cierra WhatsApp, Zoom, etc).\n'
+          + '4) Si el HTML está abierto con file://, algunos navegadores bloquean cámara incluso con permiso. Subir a Netlify/GitHub Pages soluciona.';
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        msg = 'No se encontró ninguna cámara en el dispositivo.';
+      } else if (name === 'NotReadableError' || name === 'AbortError' || name === 'TrackStartError') {
+        msg = 'La cámara está siendo usada por otra app. Cierra WhatsApp, Zoom, o cualquier app que use cámara y vuelve a intentar.';
+      } else {
+        msg = 'Error al abrir cámara: ' + (lastError.message || name || 'desconocido');
+      }
+      throw new Error(msg);
+    }
+    this.video.srcObject = this.stream;
+    try {
+      await this.video.play();
+    } catch(e) {
+      console.warn('video.play() falló:', e);
+    }
+    this.running = true;
+    this._tick();
+  },
+
+  _tick() {
+    if (!this.running) return;
+    if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+      const w = this.video.videoWidth;
+      const h = this.video.videoHeight;
+      if (w > 0 && h > 0) {
+        this.canvas.width = w;
+        this.canvas.height = h;
+        this.ctx.drawImage(this.video, 0, 0, w, h);
+        const imgData = this.ctx.getImageData(0, 0, w, h);
+        const code = jsQR(imgData.data, imgData.width, imgData.height, {
+          inversionAttempts: 'dontInvert'
+        });
+        if (code && code.data) {
+          this._onDetected(code.data);
+          return;
+        }
+      }
+    }
+    this.rafId = requestAnimationFrame(() => this._tick());
+  },
+
+  _onDetected(text) {
+    // Haptic feedback if available
+    if (navigator.vibrate) try { navigator.vibrate(80); } catch(e) {}
+    const parsed = FacturaQR.decode(text);
+    if (!parsed) {
+      document.getElementById('scanner-status').textContent = '⚠ Código no reconocido. Sigue intentando...';
+      // Continue scanning — don't stop
+      this.rafId = requestAnimationFrame(() => this._tick());
+      return;
+    }
+    this.stop();
+    closeScannerModal();
+    if (this.mode === 'sell') {
+      handleScannedForSell(parsed);
+    } else if (this.mode === 'check') {
+      handleScannedForCheck(parsed);
+    }
+  },
+
+  stop() {
+    this.running = false;
+    if (this.rafId) { cancelAnimationFrame(this.rafId); this.rafId = null; }
+    if (this.stream) {
+      this.stream.getTracks().forEach(t => t.stop());
+      this.stream = null;
+    }
+    if (this.video) { this.video.srcObject = null; }
+  }
+};
+
+async function openScannerModal(mode) {
+  const modal = document.getElementById('scanner-modal');
+  const title = document.getElementById('scanner-title');
+  const subtitle = document.getElementById('scanner-subtitle');
+  const status = document.getElementById('scanner-status');
+  if (mode === 'sell') {
+    title.textContent = 'Copiar factura anterior';
+    subtitle.textContent = 'Escanea el QR para cargar los mismos productos';
+  } else {
+    title.textContent = 'Verificar factura';
+    subtitle.textContent = 'Escanea el QR para comprobar si es ganadora';
+  }
+  status.style.color = 'var(--muted)';
+  status.style.textAlign = 'center';
+  status.textContent = 'Iniciando cámara...';
+  modal.classList.add('open');
+  try {
+    await SCANNER.start(mode);
+    status.style.textAlign = 'center';
+    status.style.color = 'var(--green)';
+    status.textContent = '✓ Cámara activa — apunta al QR';
+  } catch(err) {
+    // Show full error message in the status box (multiline supported)
+    status.style.color = 'var(--red)';
+    status.style.textAlign = 'left';
+    status.textContent = '❌ ' + (err.message || 'Error al abrir cámara');
+    // Keep a brief toast too
+    showToast('No se pudo abrir cámara — ver detalles', 'error');
+  }
+}
+
+function closeScannerModal() {
+  SCANNER.stop();
+  document.getElementById('scanner-modal').classList.remove('open');
+}
+
+// ── BUSCAR FACTURA POR NÚMERO ─────────────────────────
+let _lookupMode = null; // 'sell' or 'check'
+
+function openLookupModal(mode) {
+  _lookupMode = mode;
+  const titleEl = document.getElementById('lookup-title');
+  const subEl = document.getElementById('lookup-subtitle');
+  const status = document.getElementById('lookup-status');
+  const input = document.getElementById('lookup-input');
+  const btn = document.getElementById('lookup-submit-btn');
+  if (mode === 'sell') {
+    titleEl.textContent = 'Copiar factura';
+    subEl.textContent = 'Escribe el N° para cargar los mismos productos al carrito';
+    btn.textContent = 'Cargar al carrito';
+  } else {
+    titleEl.textContent = 'Verificar factura';
+    subEl.textContent = 'Escribe el N° para comprobar si es ganadora';
+    btn.textContent = 'Verificar';
+  }
+  input.value = '';
+  status.textContent = '';
+  btn.disabled = true;
+  document.getElementById('lookup-modal').classList.add('open');
+  setTimeout(() => input.focus(), 100);
+}
+
+function closeLookupModal() {
+  document.getElementById('lookup-modal').classList.remove('open');
+  _lookupMode = null;
+}
+
+function normalizeFacturaId(input) {
+  // Accepts: "123", "00123", "F-123", "F-00123", "f-123", " F-00123 "
+  // Returns: { display: 'F-00123', num: 123 } or null
+  if (!input) return null;
+  let s = String(input).trim().toUpperCase();
+  s = s.replace(/^F[\s\-]?/, '');         // strip "F-" or "F " or "F"
+  s = s.replace(/\D/g, '');               // keep only digits
+  if (!s) return null;
+  const num = parseInt(s, 10);
+  if (!num || num < 1) return null;
+  return { display: 'F-' + String(num).padStart(5, '0'), num: num };
+}
+
+function _facturaIdToNum(fid) {
+  // Extract numeric part from any factura id format ('F-1', 'F-00001', etc.)
+  const m = String(fid || '').match(/(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function findFacturaById(targetNum) {
+  // Searches across ALL sorteos. Compares by NUMERIC value so it matches
+  // both old format ('F-1') and new format ('F-00001').
+  for (const sorteo of (DB.sorteos || [])) {
+    const f = (sorteo.facturas || []).find(x => _facturaIdToNum(x.id) === targetNum);
+    if (f) return { factura: f, sorteo };
+  }
+  return null;
+}
+
+function onLookupInput() {
+  const raw = document.getElementById('lookup-input').value;
+  const status = document.getElementById('lookup-status');
+  const btn = document.getElementById('lookup-submit-btn');
+  const preview = document.getElementById('lookup-preview');
+  const norm = normalizeFacturaId(raw);
+  if (!norm) {
+    status.textContent = '';
+    status.style.color = 'var(--muted)';
+    btn.disabled = true;
+    btn.textContent = 'Buscar';
+    preview.style.display = 'none';
+    preview.innerHTML = '';
+    return;
+  }
+  // Live search while typing
+  const found = findFacturaById(norm.num);
+  if (!found) {
+    status.textContent = norm.display + ' — no existe';
+    status.style.color = 'var(--red)';
+    btn.disabled = true;
+    btn.textContent = 'Buscar';
+    preview.style.display = 'none';
+    return;
+  }
+  // Show preview of items
+  const items = found.factura.items || [];
+  const totalAmt = items.reduce((s, it) => s + (it.total || 0), 0);
+  const vilCount = items.filter(it => it.type === 'vil').reduce((s, it) => s + it.qty, 0);
+  const bilCount = items.filter(it => it.type === 'billete').reduce((s, it) => s + it.qty, 0);
+  const d = new Date(found.factura.date);
+  const dStr = d.toLocaleDateString('es-PA') + ' ' + d.toLocaleTimeString('es-PA', { hour: '2-digit', minute: '2-digit' });
+
+  let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">'
+           + '<div><div style="font-family:\'DM Serif Display\',serif;font-size:14px;color:var(--gold);">' + found.factura.id + '</div>'
+           + '<div style="font-size:10px;color:var(--muted);">' + dStr + ' · ' + (found.sorteo.label || 'Sorteo') + '</div></div>'
+           + '<div style="font-family:\'DM Mono\',monospace;font-size:14px;color:var(--green);font-weight:700;">$' + totalAmt.toFixed(2) + '</div>'
+           + '</div>';
+  html += '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">'
+        + items.length + ' ítem(s) · '
+        + (vilCount ? vilCount + ' chance' : '')
+        + (vilCount && bilCount ? ' + ' : '')
+        + (bilCount ? bilCount + ' billete' : '')
+        + '</div>';
+  items.forEach(it => {
+    const typeColor = it.type === 'vil' ? 'var(--blue)' : 'var(--gold)';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;border-bottom:1px dashed rgba(255,255,255,0.05);">'
+         + '<div><strong style="font-family:\'DM Mono\',monospace;color:' + typeColor + ';">#' + it.number + '</strong>'
+         + ' <span style="color:var(--muted);font-size:11px;">(' + (it.type === 'vil' ? 'chance' : 'billete') + ' ×' + it.qty + ')</span></div>'
+         + '<div style="font-size:11px;color:var(--muted);font-family:\'DM Mono\',monospace;">$' + (it.total || 0).toFixed(2) + '</div>'
+         + '</div>';
+  });
+
+  preview.innerHTML = html;
+  preview.style.display = '';
+  status.textContent = '✓ ' + found.factura.id + ' encontrada';
+  status.style.color = 'var(--green)';
+  btn.disabled = false;
+  btn.textContent = (_lookupMode === 'sell' ? 'Cargar al carrito (' + items.length + ')' : 'Verificar premio');
+}
+
+function doLookup() {
+  const raw = document.getElementById('lookup-input').value;
+  const status = document.getElementById('lookup-status');
+  const norm = normalizeFacturaId(raw);
+  if (!norm) {
+    status.textContent = '⚠ Número inválido';
+    status.style.color = 'var(--red)';
+    return;
+  }
+  const found = findFacturaById(norm.num);
+  if (!found) {
+    status.textContent = '❌ No se encontró ' + norm.display;
+    status.style.color = 'var(--red)';
+    return;
+  }
+  // Build a parsed-like object equivalent to what FacturaQR.decode() returns
+  const parsed = {
+    sid: found.sorteo.id,
+    fid: found.factura.id,
+    items: (found.factura.items || []).map(it => ({
+      number: it.number,
+      type: it.type,
+      qty: it.qty
+    }))
+  };
+  // Capture mode BEFORE closeLookupModal() resets it to null
+  const mode = _lookupMode;
+  closeLookupModal();
+  if (mode === 'sell') {
+    handleScannedForSell(parsed);
+  } else {
+    handleScannedForCheck(parsed);
+  }
+}
+
+// Called when QR scanned in SELL screen — load items into cart
+function handleScannedForSell(parsed) {
+  if (parsed._notFound) {
+    showToast('Factura ' + parsed.fid + ' no existe en este dispositivo', 'error');
+    return;
+  }
+  if (!parsed.items || !parsed.items.length) {
+    showToast('La factura no tiene items', 'error');
+    return;
+  }
+  if (!requireActiveSorteo()) return;
+  const cfg = CFG.get();
+  const vilPrice = cfg.precioVil || 0.25;
+  const billPrice = cfg.precioBillete || 1;
+  let added = 0;
+  parsed.items.forEach(it => {
+    const price = it.type === 'vil' ? vilPrice : billPrice;
+    const total = price * it.qty;
+    // Merge if same number+type already in cart
+    const existing = cart.find(c => c.number === it.number && c.type === it.type);
+    if (existing) {
+      existing.qty += it.qty;
+      existing.total = existing.qty * existing.price;
+    } else {
+      cart.push({
+        number: it.number,
+        type: it.type,
+        qty: it.qty,
+        price: price,
+        total: total
+      });
+    }
+    added++;
+  });
+  // Navigate to sell screen if user is not currently there
+  const sellNavBtn = Array.from(document.querySelectorAll('.nav-btn')).find(b =>
+    /onclick="[^"]*goTo\('sell'/.test(b.outerHTML)
+  );
+  if (sellNavBtn && !sellNavBtn.classList.contains('active')) {
+    goTo('sell', sellNavBtn);
+  }
+  // Render cart AFTER navigation so the elements exist and are visible
+  renderCart();
+  showToast('✓ ' + added + ' ítem(s) cargados al carrito');
+}
+
+// Called when QR scanned in WINNERS screen — check if winning
+function handleScannedForCheck(parsed) {
+  if (parsed._notFound) {
+    showToast('Factura ' + parsed.fid + ' no existe en este dispositivo', 'error');
+    return;
+  }
+  if (!parsed.items || !parsed.items.length) {
+    showToast('La factura no tiene items', 'error');
+    return;
+  }
+  // Find the sorteo from the scanned sid
+  let sorteo = DB.sorteos.find(s => s.id === parsed.sid);
+  if (!sorteo) {
+    // Fallback: search by factura id in all sorteos
+    sorteo = DB.sorteos.find(s => (s.facturas || []).some(f => f.id === parsed.fid));
+  }
+  if (!sorteo) {
+    showToast('No se encontró el sorteo de esa factura', 'error');
+    return;
+  }
+  const winners = getWinnersDataForSorteo(sorteo);
+  if (!winners) {
+    showCheckResultModal({
+      parsed, sorteo,
+      winners: null,
+      results: [],
+      total: 0
+    });
+    return;
+  }
+  // Check each item
+  const results = [];
+  let total = 0;
+  parsed.items.forEach(it => {
+    const winInfo = checkWinItem(it.number, it.type, winners);
+    if (winInfo && winInfo.amount > 0) {
+      const amount = winInfo.amount * it.qty;
+      total += amount;
+      results.push({ ...it, ...winInfo, amount });
+    } else {
+      results.push({ ...it, won: false, amount: 0 });
+    }
+  });
+  showCheckResultModal({ parsed, sorteo, winners, results, total });
+}
+
+// Returns { won: true, amount, label } or null
+// Uses same logic as calcularGanadores but for a single number
+function checkWinItem(number, type, winners) {
+  if (type === 'vil') {
+    const _vp = CFG.get().vilPremios || {};
+    // Last 2 digits of each 4-digit prize
+    const last2 = (n) => (n || '').padStart(4, '0').slice(-2);
+    const w1 = last2(winners.p1);
+    const w2 = last2(winners.p2);
+    const w3 = last2(winners.p3);
+    const n2 = (number || '').padStart(2, '0');
+    if (n2 === w1) return { amount: _vp.p1 || 14, label: '🥇 Chance primer premio' };
+    if (n2 === w2) return { amount: _vp.p2 || 3,  label: '🥈 Chance segundo premio' };
+    if (n2 === w3) return { amount: _vp.p3 || 2,  label: '🥉 Chance tercer premio' };
+    return null;
+  }
+  // billete — complex matching following original calcularGanadores logic
+  const _BPr = CFG.get().billetePremios || {};
+  const n = (number || '').padStart(4, '0');
+  const p1 = (winners.p1 || '').padStart(4, '0');
+  const p2 = (winners.p2 || '').padStart(4, '0');
+  const p3 = (winners.p3 || '').padStart(4, '0');
+
+  // First prize (most valuable)
+  if (p1 && p1 !== '0000') {
+    if (n === p1) return { amount: _BPr.exact1st || 2000, label: '🥇 1° - 4 cifras exactas' };
+    if (n.slice(0,3) === p1.slice(0,3)) return { amount: _BPr.pri3_1st || 50, label: '🥇 1° - 3 primeras cifras' };
+    if (n.slice(1,4) === p1.slice(1,4)) return { amount: _BPr.pri3_1st || 50, label: '🥇 1° - 3 últimas cifras' };
+    if (n.slice(0,2) === p1.slice(0,2)) return { amount: _BPr.pri2_1st || 3, label: '🥇 1° - 2 primeras cifras' };
+    if (n.slice(2,4) === p1.slice(2,4)) return { amount: _BPr.pri2_1st || 3, label: '🥇 1° - 2 últimas cifras' };
+    if (n.slice(3,4) === p1.slice(3,4)) return { amount: _BPr.ult1_1st || 1, label: '🥇 1° - última cifra' };
+  }
+  // Second prize
+  if (p2 && p2 !== '0000') {
+    if (n === p2) return { amount: _BPr.exact2nd || 600, label: '🥈 2° - 4 cifras exactas' };
+    if (n.slice(0,3) === p2.slice(0,3)) return { amount: _BPr.pri3_2nd || 20, label: '🥈 2° - 3 primeras cifras' };
+    if (n.slice(1,4) === p2.slice(1,4)) return { amount: _BPr.pri3_2nd || 20, label: '🥈 2° - 3 últimas cifras' };
+    if (n.slice(2,4) === p2.slice(2,4)) return { amount: _BPr.ult2_2nd || 2, label: '🥈 2° - 2 últimas cifras' };
+  }
+  // Third prize
+  if (p3 && p3 !== '0000') {
+    if (n === p3) return { amount: _BPr.exact3rd || 300, label: '🥉 3° - 4 cifras exactas' };
+    if (n.slice(0,3) === p3.slice(0,3)) return { amount: _BPr.pri3_3rd || 10, label: '🥉 3° - 3 primeras cifras' };
+    if (n.slice(1,4) === p3.slice(1,4)) return { amount: _BPr.pri3_3rd || 10, label: '🥉 3° - 3 últimas cifras' };
+    if (n.slice(2,4) === p3.slice(2,4)) return { amount: _BPr.ult2_3rd || 1, label: '🥉 3° - 2 últimas cifras' };
+  }
+  return null;
+}
+
+function showCheckResultModal({ parsed, sorteo, winners, results, total }) {
+  const modal = document.getElementById('check-result-modal');
+  const body = document.getElementById('check-result-body');
+  const titleEl = document.getElementById('check-result-title');
+  const isWinning = total > 0;
+  titleEl.innerHTML = isWinning
+    ? '<span style="color:var(--green);">🎉 ¡FACTURA GANADORA!</span>'
+    : '<span style="color:var(--muted);">Factura sin premio</span>';
+  
+  let html = '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">';
+  html += 'Factura: <strong style="color:var(--text);">' + parsed.fid + '</strong><br>';
+  html += 'Sorteo: <strong style="color:var(--text);">' + (sorteo.label || 'Sorteo') + '</strong>';
+  html += '</div>';
+  
+  if (!winners) {
+    html += '<div style="background:var(--surface2);border:1px solid var(--border);padding:14px;border-radius:10px;text-align:center;color:var(--muted);">';
+    html += 'Este sorteo aún no tiene premios ingresados.';
+    html += '</div>';
+  } else {
+    html += '<div style="background:var(--surface2);border:1px solid var(--border);padding:10px;border-radius:10px;margin-bottom:12px;font-size:12px;">';
+    html += '<div style="display:flex;justify-content:space-between;"><span>🥇 1°:</span><strong>' + (winners.p1 || '----') + '</strong></div>';
+    html += '<div style="display:flex;justify-content:space-between;"><span>🥈 2°:</span><strong>' + (winners.p2 || '----') + '</strong></div>';
+    html += '<div style="display:flex;justify-content:space-between;"><span>🥉 3°:</span><strong>' + (winners.p3 || '----') + '</strong></div>';
+    html += '</div>';
+
+    html += '<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Items de la factura:</div>';
+    results.forEach(r => {
+      const bg = r.amount > 0 ? 'rgba(48,208,96,0.1)' : 'var(--surface2)';
+      const bd = r.amount > 0 ? 'rgba(48,208,96,0.3)' : 'var(--border)';
+      html += '<div style="background:' + bg + ';border:1px solid ' + bd + ';padding:10px;border-radius:8px;margin-bottom:6px;">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+      html += '<div><strong style="font-size:15px;">' + r.number + '</strong> <span style="color:var(--muted);font-size:11px;">(' + r.type + ' ×' + r.qty + ')</span></div>';
+      if (r.amount > 0) {
+        html += '<div style="color:var(--green);font-weight:700;">+$' + r.amount.toFixed(2) + '</div>';
+      } else {
+        html += '<div style="color:var(--muted);font-size:11px;">Sin premio</div>';
+      }
+      html += '</div>';
+      if (r.label) {
+        html += '<div style="font-size:11px;color:var(--green);margin-top:4px;">' + r.label + '</div>';
+      }
+      html += '</div>';
+    });
+
+    if (total > 0) {
+      html += '<div style="margin-top:12px;padding:14px;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(48,208,96,0.15));border:1px solid var(--gold);border-radius:10px;text-align:center;">';
+      html += '<div style="font-size:12px;color:var(--muted);">TOTAL A PAGAR</div>';
+      html += '<div style="font-size:26px;font-weight:800;color:var(--gold);font-family:\'DM Serif Display\',serif;">$' + total.toFixed(2) + '</div>';
+      html += '</div>';
+    }
+  }
+  body.innerHTML = html;
+  modal.classList.add('open');
+}
+
+function closeCheckResultModal() {
+  document.getElementById('check-result-modal').classList.remove('open');
+}
+
+function updatePrinterStatus() {
+  const btn = document.getElementById('btn-printer');
+  const statusEl = document.getElementById('printer-status');
+  const statusText = document.getElementById('printer-status-text');
+  if (PRINTER.connected) {
+    btn?.classList.add('connected');
+    if (statusEl) statusEl.style.borderColor = 'rgba(48,208,96,0.3)';
+    if (statusText) {
+      statusText.textContent = '✓ Conectada: ' + (PRINTER.device?.name || 'Impresora');
+      statusText.style.color = 'var(--green)';
+    }
+  } else {
+    btn?.classList.remove('connected');
+    if (statusEl) statusEl.style.borderColor = 'var(--border)';
+    if (statusText) {
+      statusText.textContent = 'Sin impresora conectada';
+      statusText.style.color = 'var(--muted)';
+    }
+  }
+}
+
+async function connectPrinter() {
+  try {
+    showToast('Buscando impresoras...');
+    await PRINTER.connect();
+    updatePrinterStatus();
+    showToast('✓ Impresora conectada');
+  } catch(err) {
+    console.error(err);
+    const msg = err.message || 'Error al conectar';
+    showToast(msg.length > 60 ? msg.slice(0,60)+'...' : msg, 'error');
+  }
+}
+
+async function disconnectPrinter() {
+  try {
+    await PRINTER.disconnect();
+    updatePrinterStatus();
+    showToast('Impresora desconectada');
+  } catch(err) {
+    showToast('Error al desconectar', 'error');
+  }
+}
+
+async function togglePrinter() {
+  // Clicking header button: if connected, reprint last factura; if not, go to config
+  if (PRINTER.connected) {
+    const facturas = DB.facturas;
+    if (facturas.length > 0) {
+      try {
+        await PRINTER.printFactura(facturas[facturas.length - 1], DB.activeSorteo);
+        showToast('✓ Última factura reimpresa');
+      } catch (e) {
+        console.error(e);
+        showToast('Error al imprimir: ' + e.message, 'error');
+      }
+    } else {
+      showToast('No hay facturas para reimprimir');
+    }
+  } else {
+    goTo('config', document.querySelectorAll('.nav-btn')[4]);
+    setTimeout(() => {
+      showToast('Conecta una impresora Bluetooth');
+    }, 300);
+  }
+}
+
+async function testPrint() {
+  if (!PRINTER.connected) {
+    showToast('Conecta primero la impresora', 'error');
+    return;
+  }
+  try {
+    await PRINTER.printTest();
+    showToast('✓ Prueba enviada');
+  } catch(err) {
+    showToast('Error: ' + (err.message || 'al imprimir'), 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// ── SORTEO LOGIC ──────────────────────────────────────
+function getNextSorteoInfo() {
+  const now = new Date();
+  const day = now.getDay();
+  let daysAhead;
+  if (day <= 3) {
+    daysAhead = day === 0 ? 3 : (3 - day);
+  } else {
+    daysAhead = 7 - day;
+  }
+  const fechaJuego = new Date(now);
+  fechaJuego.setDate(now.getDate() + daysAhead);
+  fechaJuego.setHours(0,0,0,0);
+  const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const label = dias[fechaJuego.getDay()]+' '+fechaJuego.toLocaleDateString('es-PA',{day:'2-digit',month:'short',year:'numeric'});
+  return { fechaJuego: fechaJuego.toISOString(), label };
+}
+
+function ensureActiveSorteo() {
+  // Returns the active sorteo or null. Does NOT auto-create one.
+  // Use createNewSorteo() to explicitly start a new session.
+  const sorteos = DB.sorteos;
+  return sorteos.find(x => !x.closed) || null;
+}
+
+function requireActiveSorteo() {
+  const s = ensureActiveSorteo();
+  if (!s) {
+    showToast('Debes abrir un sorteo antes de vender', 'error');
+    return null;
+  }
+  return s;
+}
+
+let selectedSorteoDay = null;
+
+function selectSorteoDay(day) {
+  selectedSorteoDay = day;
+  const domBtn = document.getElementById('ns-btn-dom');
+  const mieBtn = document.getElementById('ns-btn-mie');
+  domBtn.classList.remove('active','billete','vil');
+  mieBtn.classList.remove('active','billete','vil');
+  if (day === 'domingo') {
+    domBtn.classList.add('active','billete');
+  } else {
+    mieBtn.classList.add('active','billete');
+  }
+  const now = new Date();
+  const target = day === 'domingo' ? 0 : 3;
+  let daysAhead = (target - now.getDay() + 7) % 7;
+  if (daysAhead === 0) daysAhead = 7;
+  const fecha = new Date(now);
+  fecha.setDate(now.getDate() + daysAhead);
+  fecha.setHours(13, 0, 0, 0);
+  document.getElementById('ns-cierre').value = toDatetimeLocal(fecha);
+}
+
+function closeSorteoAndNew() {
+  selectedSorteoDay = null;
+  const domBtn = document.getElementById('ns-btn-dom');
+  const mieBtn = document.getElementById('ns-btn-mie');
+  if (domBtn) domBtn.classList.remove('active','billete','vil');
+  if (mieBtn) mieBtn.classList.remove('active','billete','vil');
+  document.getElementById('ns-cierre').value = '';
+  document.getElementById('nuevo-sorteo-modal').classList.add('open');
+}
+
+function closeNuevoSorteoModal() {
+  document.getElementById('nuevo-sorteo-modal').classList.remove('open');
+}
+
+function toDatetimeLocal(date) {
+  const pad = n => String(n).padStart(2,'0');
+  return date.getFullYear()+'-'+pad(date.getMonth()+1)+'-'+pad(date.getDate())
+    +'T'+pad(date.getHours())+':'+pad(date.getMinutes());
+}
+
+function confirmarNuevoSorteo() {
+  if (!selectedSorteoDay) { showToast('Elige Domingo o Miércoles','error'); return; }
+  const cierreVal = document.getElementById('ns-cierre').value;
+  if (!cierreVal) { showToast('Elige la hora de cierre','error'); return; }
+  const fechaCierre = new Date(cierreVal);
+  if (fechaCierre <= new Date()) { showToast('La hora debe ser futura','error'); return; }
+  const label = (selectedSorteoDay === 'domingo' ? 'Domingo' : 'Miércoles')
+    + ' ' + fechaCierre.toLocaleDateString('es-PA',{day:'2-digit',month:'short',year:'numeric'});
+  const sorteos = DB.sorteos;
+  const idx = sorteos.findIndex(x => !x.closed);
+  if (idx >= 0) sorteos[idx].closed = true;
+  const newSorteo = {
+    id: 'S-' + (sorteos.length + 1),
+    label,
+    fechaJuego: fechaCierre.toISOString(),
+    fechaCierre: fechaCierre.toISOString(),
+    fechaCreado: new Date().toISOString(),
+    closed: false, facturas: [], winners: null
+  };
+  sorteos.push(newSorteo);
+  DB.sorteos = sorteos;
+  ['w-1st','w-2nd','w-3rd'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  cart = []; renderCart();
+  closeNuevoSorteoModal();
+  updateSorteoHeader();
+  updateSellScreenVisibility();
+  updateHome(); renderHistory();
+  showToast('Sorteo creado');
+  scheduleAutoClose();
+}
+
+let autoCloseTimer = null;
+
+function scheduleAutoClose() {
+  if (autoCloseTimer) clearTimeout(autoCloseTimer);
+  const s = DB.sorteos.find(x => !x.closed);
+  if (!s || !s.fechaCierre) return;
+  const ms = new Date(s.fechaCierre) - new Date();
+  if (ms <= 0) { autoCloseSorteo(); return; }
+  autoCloseTimer = setTimeout(autoCloseSorteo, ms);
+}
+
+function autoCloseSorteo() {
+  const sorteos = DB.sorteos;
+  const idx = sorteos.findIndex(x => !x.closed);
+  if (idx < 0) return;
+  sorteos[idx].closed = true;
+  DB.sorteos = sorteos;
+  updateSorteoHeader();
+  updateSellScreenVisibility();
+  updateHome(); renderHistory();
+  showToast('Sorteo cerrado automáticamente');
+}
+
+function updateSorteoHeader() {
+  const s = ensureActiveSorteo();
+  const labelEl = document.getElementById('sorteo-label');
+  const idEl = document.getElementById('sorteo-id');
+  const cierreEl = document.getElementById('sorteo-cierre');
+  if (!s) {
+    if (labelEl) labelEl.textContent = 'Sin sorteo activo';
+    if (idEl) idEl.textContent = '';
+    if (cierreEl) {
+      cierreEl.textContent = 'Crea un sorteo para vender';
+      cierreEl.style.color = 'var(--red)';
+    }
+    return;
+  }
+  if (labelEl) labelEl.textContent = s.label;
+  if (idEl) idEl.textContent = s.id;
+  if (cierreEl && s.fechaCierre) {
+    const d = new Date(s.fechaCierre);
+    const now = new Date();
+    const ms = d - now;
+    if (ms > 0) {
+      const h = Math.floor(ms/3600000);
+      const m = Math.floor((ms%3600000)/60000);
+      const timeStr = d.toLocaleString('es-PA',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+      cierreEl.textContent = 'Cierra: '+timeStr+(ms < 3600000*3 ? ' ('+h+'h '+m+'m)' : '');
+      cierreEl.style.color = ms < 3600000*2 ? 'var(--red)' : 'var(--muted)';
+    } else {
+      cierreEl.textContent = 'Cerrado';
+      cierreEl.style.color = 'var(--muted)';
+    }
+  }
+}
+
+// Live countdown for the Sell screen — updates every second
+let _countdownAnchor = null; // {start: ms, end: ms} for the bar
+function updateSellCountdown() {
+  const card = document.getElementById('sell-countdown-card');
+  if (!card) return;
+  const s = DB.activeSorteo;
+  if (!s || !s.fechaCierre || s.closed) {
+    card.style.display = 'none';
+    _countdownAnchor = null;
+    return;
+  }
+  const end = new Date(s.fechaCierre).getTime();
+  const now = Date.now();
+  const ms = end - now;
+  card.style.display = '';
+
+  // Anchor the progress bar to when this sorteo "started" (or when we first see it)
+  if (!_countdownAnchor || _countdownAnchor.end !== end) {
+    // Use fechaCreado as start if available, else 24h before fechaCierre
+    const startBase = s.fechaCreado ? new Date(s.fechaCreado).getTime() : (end - 24*3600*1000);
+    _countdownAnchor = { start: startBase, end };
+  }
+
+  const timeEl = document.getElementById('sell-countdown-time');
+  const whenEl = document.getElementById('sell-countdown-when');
+  const iconEl = document.getElementById('sell-countdown-icon');
+  const barFill = document.getElementById('sell-countdown-bar-fill');
+
+  if (ms <= 0) {
+    timeEl.textContent = '00:00:00';
+    timeEl.style.color = 'var(--red)';
+    whenEl.textContent = '⚠ Sorteo cerrado — toca "Nuevo sorteo" para continuar';
+    if (barFill) barFill.style.width = '0%';
+    if (iconEl) iconEl.querySelector('svg').style.color = 'var(--red)';
+    return;
+  }
+
+  const totalSec = Math.floor(ms / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+
+  // Format
+  const pad2 = n => String(n).padStart(2, '0');
+  let timeStr;
+  if (days > 0) {
+    timeStr = days + 'd ' + pad2(hours) + ':' + pad2(mins) + ':' + pad2(secs);
+  } else {
+    timeStr = pad2(hours) + ':' + pad2(mins) + ':' + pad2(secs);
+  }
+  timeEl.textContent = timeStr;
+
+  // Color and icon based on urgency
+  let color = 'var(--green)';
+  let pulse = false;
+  if (ms < 15 * 60 * 1000) {        // < 15 min
+    color = 'var(--red)';
+    pulse = true;
+  } else if (ms < 60 * 60 * 1000) {  // < 1h
+    color = 'var(--red)';
+  } else if (ms < 3 * 60 * 60 * 1000) { // < 3h
+    color = '#f0a020'; // amber
+  } else if (ms < 12 * 60 * 60 * 1000) { // < 12h
+    color = 'var(--gold)';
+  }
+  timeEl.style.color = color;
+  if (iconEl) iconEl.querySelector('svg').style.color = color;
+  timeEl.style.animation = pulse ? 'pulse 1s infinite' : '';
+
+  // Closing date label
+  const d = new Date(end);
+  const dayName = d.toLocaleDateString('es-PA', { weekday: 'long' });
+  const dateStr = d.toLocaleDateString('es-PA', { day: '2-digit', month: 'short' });
+  const timeOfDay = d.toLocaleTimeString('es-PA', { hour: '2-digit', minute: '2-digit' });
+  whenEl.textContent = 'Cierra el ' + dayName + ' ' + dateStr + ' a las ' + timeOfDay;
+
+  // Progress bar
+  if (barFill && _countdownAnchor) {
+    const total = _countdownAnchor.end - _countdownAnchor.start;
+    const elapsed = now - _countdownAnchor.start;
+    const pct = Math.max(0, Math.min(100, 100 * (1 - elapsed / total)));
+    barFill.style.width = pct + '%';
+    // Color the bar based on remaining
+    if (ms < 60 * 60 * 1000) {
+      barFill.style.background = 'var(--red)';
+    } else if (ms < 3 * 60 * 60 * 1000) {
+      barFill.style.background = 'linear-gradient(90deg,#f0a020,var(--red))';
+    } else {
+      barFill.style.background = 'linear-gradient(90deg,var(--gold),var(--green))';
+    }
+  }
+}
+
+// Start the per-second countdown ticker
+setInterval(updateSellCountdown, 1000);
+updateSellCountdown();
+
+let currentFType = 'vil';
+let currentFilter = 'all';
+let cart = [];
+
+function parseInput(raw, type) {
+  const s = String(raw).replace(/\D/g,'');
+  const nLen = NUM_LEN[type];
+  if (s.length < nLen) return null;
+  const num = s.slice(0, nLen);
+  const qtyStr = s.slice(nLen);
+  const qty = qtyStr.length > 0 ? parseInt(qtyStr) : 1;
+  if (!qty || qty < 1) return null;
+  return { num, qty, total: PRICES[type] * qty };
+}
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(()=>t.className='toast', 2600);
+}
+
+function toggleCollapsible(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+
+// ── FACTURA / CART ────────────────────────────────────
+function setFType(type) {
+  currentFType = type;
+  document.getElementById('f-btn-vil').className = 'toggle-btn vil'+(type==='vil'?' active':'');
+  document.getElementById('f-btn-billete').className = 'toggle-btn billete'+(type==='billete'?' active':'');
+  document.getElementById('f-input-label').textContent = 'Número ('+NUM_LEN[type]+' dígitos) + cantidad';
+  document.getElementById('f-inp-hint').textContent = NUM_LEN[type]+' primeros dígitos = número · El resto = cantidad · Enter para agregar';
+  document.getElementById('f-inp-number').placeholder = type==='vil' ? 'Ej: 1205' : 'Ej: 12343';
+  document.getElementById('f-inp-number').value = '';
+  document.getElementById('f-parsed-preview').className = 'parsed-preview';
+  document.getElementById('f-btn-add').disabled = true;
+}
+
+function onFKeydown(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    // Only add if the add button is enabled (meaning input is valid)
+    const addBtn = document.getElementById('f-btn-add');
+    if (addBtn && !addBtn.disabled) {
+      addToCart();
+    }
+  }
+}
+
+function onFInput() {
+  const raw = document.getElementById('f-inp-number').value;
+  const parsed = parseInput(raw, currentFType);
+  const preview = document.getElementById('f-parsed-preview');
+  if (!parsed) {
+    preview.className = 'parsed-preview';
+    document.getElementById('f-btn-add').disabled = true;
+    return;
+  }
+  document.getElementById('f-parsed-num').textContent = '#'+parsed.num;
+  document.getElementById('f-parsed-num').className = 'parsed-part-value num '+currentFType;
+  document.getElementById('f-parsed-qty').textContent = '×'+parsed.qty;
+  preview.className = 'parsed-preview visible';
+  document.getElementById('f-btn-add').disabled = false;
+}
+
+function addToCart() {
+  if (!requireActiveSorteo()) return;
+  const raw = document.getElementById('f-inp-number').value;
+  const parsed = parseInput(raw, currentFType);
+  if (!parsed) return;
+  if (!checkLimits(parsed.num, currentFType, parsed.qty)) return;
+  const existing = cart.find(c => c.number===parsed.num && c.type===currentFType);
+  if (existing) {
+    existing.qty += parsed.qty;
+    existing.total = existing.qty * PRICES[currentFType];
+  } else {
+    cart.push({ type: currentFType, number: parsed.num, qty: parsed.qty, price: PRICES[currentFType], total: PRICES[currentFType]*parsed.qty });
+  }
+  document.getElementById('f-inp-number').value = '';
+  document.getElementById('f-parsed-preview').className = 'parsed-preview';
+  document.getElementById('f-btn-add').disabled = true;
+  renderCart();
+  showToast('#'+parsed.num+' agregado');
+  // Keep focus in input for fast consecutive entries
+  setTimeout(() => document.getElementById('f-inp-number').focus(), 50);
+}
+
+function removeFromCart(idx) {
+  cart.splice(idx, 1);
+  renderCart();
+}
+
+function clearCart() {
+  cart = [];
+  renderCart();
+}
+
+function renderCart() {
+  const listEl = document.getElementById('cart-items-list');
+  const barEl  = document.getElementById('factura-bar');
+  if (!cart.length) {
+    listEl.innerHTML = '<div class="factura-empty">Aún no has agregado ningún número</div>';
+    barEl.style.display = 'none';
+    return;
+  }
+  listEl.innerHTML = cart.map((c,i) =>
+    '<div class="cart-item">'
+    +'<div class="cart-num">#'+c.number+'</div>'
+    +'<div class="cart-info">'
+    +'<div style="display:flex;align-items:center;gap:6px"><span class="type-chip '+c.type+'">'+c.type.toUpperCase()+'</span>'
+    +'<span style="font-size:13px;font-weight:500">×'+c.qty+'</span></div>'
+    +'<div class="cart-detail">$'+c.price.toFixed(2)+' c/u</div>'
+    +'</div>'
+    +'<div class="cart-price">$'+c.total.toFixed(2)+'</div>'
+    +'<button class="btn-red-sm" onclick="removeFromCart('+i+')">×</button>'
+    +'</div>'
+  ).join('');
+  const vilesQty    = cart.filter(c=>c.type==='vil').reduce((s,c)=>s+c.qty,0);
+  const vilesAmt    = cart.filter(c=>c.type==='vil').reduce((s,c)=>s+c.total,0);
+  const billetesQty = cart.filter(c=>c.type==='billete').reduce((s,c)=>s+c.qty,0);
+  const billetesAmt = cart.filter(c=>c.type==='billete').reduce((s,c)=>s+c.total,0);
+  const total       = vilesAmt + billetesAmt;
+  document.getElementById('fb-viles').textContent    = vilesQty > 0    ? vilesQty+' × $'+vilesAmt.toFixed(2)       : '—';
+  document.getElementById('fb-billetes').textContent = billetesQty > 0 ? billetesQty+' × $'+billetesAmt.toFixed(2) : '—';
+  document.getElementById('fb-total').textContent    = '$'+total.toFixed(2);
+  barEl.style.display = '';
+}
+
+function confirmFactura() {
+  if (!cart.length) { showToast('La factura está vacía','error'); return; }
+  if (!requireActiveSorteo()) return;
+  const facturas = DB.facturas;
+  // Get highest existing factura number across ALL sorteos to keep IDs globally unique
+  const allFacturas = (DB.sorteos || []).flatMap(s => s.facturas || []);
+  const nums = allFacturas.map(f => parseInt(String(f.id).replace(/^F-/i, ''), 10) || 0);
+  const nextNum = nums.length ? Math.max(...nums) + 1 : 1;
+  const fId = 'F-' + String(nextNum).padStart(5, '0');
+  const items = cart.map(c => ({
+    id: Date.now() + Math.random(),
+    number: c.number, type: c.type, qty: c.qty, price: c.price, total: c.total
+  }));
+  const newFactura = { id: fId, date: new Date().toISOString(), items };
+  facturas.push(newFactura);
+  DB.facturas = facturas;
+  cart = [];
+  renderCart();
+  updateHome();
+  showToast('Factura guardada — ' + items.length + ' ítem(s)');
+  // Auto-print if printer is connected
+  if (PRINTER.connected) {
+    setTimeout(async () => {
+      try {
+        await PRINTER.printFactura(newFactura, DB.activeSorteo);
+        showToast('✓ Factura impresa');
+      } catch (e) {
+        console.error(e);
+        showToast('Error al imprimir: ' + e.message, 'error');
+      }
+    }, 200);
+  } else {
+    showToast('⚠ Impresora desconectada — factura no impresa', 'error');
+  }
+}
+
+// ── WINNER HELPERS ────────────────────────────────────
+function getWinnersData() {
+  const w = DB.winners;
+  if (!w || Array.isArray(w) || !w.p1) return null;
+  return w;
+}
+function getWinnersDataForSorteo(sorteo) {
+  const w = sorteo?.winners;
+  if (!w || Array.isArray(w) || !w.p1) return null;
+  return w;
+}
+function isWinner(num, type) { return isWinnerInSorteo(num, type, DB.activeSorteo); }
+function isWinnerInSorteo(num, type, sorteo) {
+  const w = getWinnersDataForSorteo(sorteo);
+  if (!w) return false;
+  if (type === 'billete') return calcBilletePrize(num, w.p1, w.p2, w.p3) > 0;
+  if (type === 'vil')     return calcVilPrize(num, w.p1, w.p2, w.p3) > 0;
+  return false;
+}
+function getPrize(num, type) { return getPrizeInSorteo(num, type, DB.activeSorteo); }
+function getPrizeInSorteo(num, type, sorteo) {
+  const w = getWinnersDataForSorteo(sorteo);
+  if (!w) return 0;
+  if (type === 'billete') return calcBilletePrize(num, w.p1, w.p2, w.p3);
+  if (type === 'vil')     return calcVilPrize(num, w.p1, w.p2, w.p3);
+  return 0;
+}
+
+let _homeNumsTab = 'vil';
+
+function setHomeNumsTab(tab) {
+  _homeNumsTab = tab;
+  document.getElementById('hn-tab-vil').classList.toggle('active', tab === 'vil');
+  document.getElementById('hn-tab-billete').classList.toggle('active', tab === 'billete');
+  renderHomeNumsAcumulado();
+}
+
+function renderHomeNumsAcumulado() {
+  const container = document.getElementById('home-nums-acumulado');
+  if (!container) return;
+  const facturas = DB.facturas;
+  const items = facturas.flatMap(f => f.items).filter(i => i.type === _homeNumsTab);
+  if (!items.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:14px 0;">'
+      + 'Sin ventas de ' + (_homeNumsTab === 'vil' ? 'chance' : 'billete') + ' en este sorteo</div>';
+    return;
+  }
+  // Aggregate qty by number
+  const map = {};
+  items.forEach(i => { map[i.number] = (map[i.number] || 0) + i.qty; });
+  // Sort by number ASC (menor a mayor)
+  const sortedAsc = Object.entries(map).sort((a,b) => parseInt(a[0]) - parseInt(b[0]));
+  // Determine top 3 by qty
+  const sortedByQty = [...sortedAsc].sort((a,b) => b[1] - a[1]);
+  const top1Num = sortedByQty[0]?.[0];
+  const top2Num = sortedByQty[1]?.[0];
+  const top3Num = sortedByQty[2]?.[0];
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px;margin-top:4px;">';
+  sortedAsc.forEach(([num, qty]) => {
+    let bg = 'var(--surface2)';
+    let bd = 'var(--border)';
+    let textColor = 'var(--text)';
+    let qtyColor = 'var(--muted)';
+    let badge = '';
+    if (num === top1Num && qty > 0) {
+      bg = 'rgba(255,69,58,0.12)';
+      bd = 'rgba(255,69,58,0.4)';
+      textColor = '#ff8c80';
+      qtyColor = '#ff8c80';
+      badge = '<div style="position:absolute;top:-6px;right:-4px;background:var(--red);color:white;font-size:9px;font-weight:700;border-radius:8px;padding:2px 5px;">1°</div>';
+    } else if (num === top2Num && qty > 0) {
+      bg = 'rgba(255,159,10,0.14)';
+      bd = 'rgba(255,159,10,0.4)';
+      textColor = '#ffb050';
+      qtyColor = '#ffb050';
+      badge = '<div style="position:absolute;top:-6px;right:-4px;background:#ff9f0a;color:white;font-size:9px;font-weight:700;border-radius:8px;padding:2px 5px;">2°</div>';
+    } else if (num === top3Num && qty > 0) {
+      bg = 'rgba(212,175,55,0.14)';
+      bd = 'rgba(212,175,55,0.4)';
+      textColor = 'var(--gold)';
+      qtyColor = 'var(--gold)';
+      badge = '<div style="position:absolute;top:-6px;right:-4px;background:var(--gold);color:#1a1a1a;font-size:9px;font-weight:700;border-radius:8px;padding:2px 5px;">3°</div>';
+    }
+    html += '<div style="position:relative;background:' + bg + ';border:1px solid ' + bd + ';border-radius:8px;padding:8px 6px;text-align:center;">'
+         + badge
+         + '<div style="font-family:\'DM Mono\',monospace;font-size:15px;font-weight:700;color:' + textColor + ';">#' + num + '</div>'
+         + '<div style="font-size:10px;color:' + qtyColor + ';margin-top:2px;">×' + qty + '</div>'
+         + '</div>';
+  });
+  html += '</div>';
+
+  // Summary info
+  const total = sortedAsc.reduce((s, [,q]) => s + q, 0);
+  html += '<div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center;">'
+       + sortedAsc.length + ' número(s) · ' + total + ' pedazo(s) · ordenados de menor a mayor</div>';
+
+  container.innerHTML = html;
+}
+
+function updateHome() {
+  const facturas = DB.facturas;
+  const w = getWinnersData();
+  const allItems = facturas.flatMap(f => f.items);
+  const total = allItems.reduce((s,t)=>s+t.total,0);
+  const viles = allItems.filter(t=>t.type==='vil').reduce((s,t)=>s+t.qty,0);
+  const billetes = allItems.filter(t=>t.type==='billete').reduce((s,t)=>s+t.qty,0);
+  document.getElementById('stat-total').textContent = '$'+total.toFixed(2);
+  document.getElementById('stat-count').textContent = facturas.length;
+  document.getElementById('stat-viles').textContent = viles;
+  document.getElementById('stat-billetes').textContent = billetes;
+
+  // Render the accumulated numbers list (replaces "Última Venta")
+  renderHomeNumsAcumulado();
+
+  const hwl = document.getElementById('home-winners-list');
+  if (!w) {
+    hwl.innerHTML = '<div style="color:var(--muted);font-size:13px;">No hay premios definidos aún</div>';
+  } else {
+    hwl.innerHTML = [
+      { label:'🥇 1er', num: w.p1 }, { label:'🥈 2do', num: w.p2 }, { label:'🥉 3er', num: w.p3 }
+    ].map(({label, num}) =>
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
+      +'<span style="font-size:12px;color:var(--muted);min-width:34px">'+label+'</span>'
+      +'<span style="font-family:\'DM Mono\',monospace;font-size:17px;color:var(--gold);">#'+num+'</span>'
+      +'</div>'
+    ).join('')
+    + (() => {
+        const ganadores = allItems.filter(i => isWinner(i.number, i.type));
+        if (!ganadores.length) return '<div style="font-size:12px;color:var(--muted);margin-top:4px;">Ningún número vendido ganó aún</div>';
+        const totalPremios = ganadores.reduce((s,g) => s + getPrize(g.number, g.type)*g.qty, 0);
+        return '<div style="font-size:12px;color:var(--green);margin-top:6px;font-weight:600;">'+ganadores.length+' ganador(es) · $'+totalPremios.toFixed(2)+' a pagar</div>';
+      })();
+  }
+  renderResumen();
+}
+
+// ── RESUMEN ───────────────────────────────────────────
+function renderResumen() {
+  const w = getWinnersData();
+  const allItems = DB.facturas.flatMap(f => f.items);
+  const viles = allItems.filter(i => i.type === 'vil');
+  const chPedazos = viles.reduce((s,i) => s+i.qty, 0);
+  const chTotal   = viles.reduce((s,i) => s+i.total, 0);
+  const chComision = parseFloat(document.getElementById('ch-comision')?.value) || 0;
+  const chNeto    = chTotal - chComision;
+
+  let chP1qty=0, chP2qty=0, chP3qty=0;
+  if (w) {
+    viles.forEach(i => {
+      if (i.number === w.p1.slice(2,4)) chP1qty += i.qty;
+      if (i.number === w.p2.slice(2,4)) chP2qty += i.qty;
+      if (i.number === w.p3.slice(2,4)) chP3qty += i.qty;
+    });
+  }
+  const _vp = CFG.get().vilPremios;
+  const chP1total = chP1qty * (_vp.p1 || 14);
+  const chP2total = chP2qty * (_vp.p2 || 3);
+  const chP3total = chP3qty * (_vp.p3 || 2);
+  const chGanado  = chP1total + chP2total + chP3total;
+  const chPyG     = chNeto - chGanado;
+
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('ch-pedazos', chPedazos);
+  set('ch-total', '$'+chTotal.toFixed(2));
+  set('ch-neto', '$'+chNeto.toFixed(2));
+  set('ch-p1-qty', chP1qty); set('ch-p1-total', '$'+chP1total);
+  set('ch-p2-qty', chP2qty); set('ch-p2-total', '$'+chP2total);
+  set('ch-p3-qty', chP3qty); set('ch-p3-total', '$'+chP3total);
+  set('ch-total-ganado', '$'+chGanado);
+  set('ch-p1-premio', '$'+(_vp.p1||14));
+  set('ch-p2-premio', '$'+(_vp.p2||3));
+  set('ch-p3-premio', '$'+(_vp.p3||2));
+  set('ch-summary', chPedazos>0 ? '· '+chPedazos+' ped. · $'+chTotal.toFixed(2) : '');
+  const chPyGEl = document.getElementById('ch-pyg');
+  if (chPyGEl) { chPyGEl.textContent = '$'+chPyG.toFixed(2); chPyGEl.style.color = chPyG >= 0 ? 'var(--green)' : 'var(--red)'; }
+
+  const billetes = allItems.filter(i => i.type === 'billete');
+  const blPedazos = billetes.reduce((s,i) => s+i.qty, 0);
+  const blTotal   = billetes.reduce((s,i) => s+i.total, 0);
+  const blComision = parseFloat(document.getElementById('bl-comision')?.value) || 0;
+  const blNeto    = blTotal - blComision;
+
+  let bl = { r1c4:0, r1c3p:0,r1c3u:0, r1c2p:0,r1c2u:0, r1c1:0,
+             r2c4:0, r2c3p:0,r2c3u:0, r2c2u:0,
+             r3c4:0, r3c3p:0,r3c3u:0, r3c2u:0 };
+
+  if (w) {
+    const p1=w.p1, p2=w.p2, p3=w.p3;
+    billetes.forEach(i => {
+      const n = i.number; const q = i.qty;
+      if (n===p1)                                    bl.r1c4  += q;
+      else if (n.slice(0,3)===p1.slice(0,3))         bl.r1c3p += q;
+      else if (n.slice(1,4)===p1.slice(1,4))         bl.r1c3u += q;
+      if (n!==p1 && n.slice(0,2)===p1.slice(0,2))   bl.r1c2p += q;
+      if (n!==p1 && n.slice(2,4)===p1.slice(2,4))   bl.r1c2u += q;
+      if (n!==p1 && n.slice(3,4)===p1.slice(3,4))   bl.r1c1  += q;
+      if (n===p2)                                    bl.r2c4  += q;
+      else if (n.slice(0,3)===p2.slice(0,3))         bl.r2c3p += q;
+      else if (n.slice(1,4)===p2.slice(1,4))         bl.r2c3u += q;
+      if (n!==p2 && n.slice(2,4)===p2.slice(2,4))   bl.r2c2u += q;
+      if (n===p3)                                    bl.r3c4  += q;
+      else if (n.slice(0,3)===p3.slice(0,3))         bl.r3c3p += q;
+      else if (n.slice(1,4)===p3.slice(1,4))         bl.r3c3u += q;
+      if (n!==p3 && n.slice(2,4)===p3.slice(2,4))   bl.r3c2u += q;
+    });
+  }
+
+  const cell = (qty, prize) => qty > 0 ? qty+'|$'+(qty*prize) : '0|0';
+  const _BPr = CFG.get().billetePremios;
+  set('bl-pedazos', blPedazos);
+  set('bl-total', '$'+blTotal.toFixed(2));
+  set('bl-neto', '$'+blNeto.toFixed(2));
+  set('bl-summary', blPedazos>0 ? '· '+blPedazos+' ped. · $'+blTotal.toFixed(2) : '');
+
+  set('bl-1st-4c', cell(bl.r1c4,  _BPr.exact1st||2000));
+  set('bl-1st-3c', cell(bl.r1c3p+bl.r1c3u, _BPr.pri3_1st||50));
+  set('bl-1st-2c', cell(bl.r1c2p+bl.r1c2u, _BPr.pri2_1st||3));
+  set('bl-1st-1c', cell(bl.r1c1,  _BPr.ult1_1st||1));
+  set('bl-2nd-4c', cell(bl.r2c4,  _BPr.exact2nd||600));
+  set('bl-2nd-3c', cell(bl.r2c3p+bl.r2c3u, _BPr.pri3_2nd||20));
+  set('bl-2nd-2c', cell(bl.r2c2u, _BPr.ult2_2nd||2));
+  set('bl-3rd-4c', cell(bl.r3c4,  _BPr.exact3rd||300));
+  set('bl-3rd-3c', cell(bl.r3c3p+bl.r3c3u, _BPr.pri3_3rd||10));
+  set('bl-3rd-2c', cell(bl.r3c2u, _BPr.ult2_3rd||1));
+
+  const blGanado =
+    bl.r1c4*(_BPr.exact1st||2000) + (bl.r1c3p+bl.r1c3u)*(_BPr.pri3_1st||50) +
+    (bl.r1c2p+bl.r1c2u)*(_BPr.pri2_1st||3) + bl.r1c1*(_BPr.ult1_1st||1) +
+    bl.r2c4*(_BPr.exact2nd||600) + (bl.r2c3p+bl.r2c3u)*(_BPr.pri3_2nd||20) + bl.r2c2u*(_BPr.ult2_2nd||2) +
+    bl.r3c4*(_BPr.exact3rd||300) + (bl.r3c3p+bl.r3c3u)*(_BPr.pri3_3rd||10) + bl.r3c2u*(_BPr.ult2_3rd||1);
+
+  const blPyG = blNeto - blGanado;
+  set('bl-total-ganado', '$'+blGanado);
+  const blPyGEl = document.getElementById('bl-pyg');
+  if (blPyGEl) { blPyGEl.textContent = '$'+blPyG.toFixed(2); blPyGEl.style.color = blPyG >= 0 ? 'var(--green)' : 'var(--red)'; }
+
+  const totalGanado = chGanado + blGanado;
+  const totalPyG = chPyG + blPyG;
+  const totalPyGEl = document.getElementById('res-total-pyg');
+  if (totalPyGEl) { totalPyGEl.textContent = '$'+totalPyG.toFixed(2); totalPyGEl.style.color = totalPyG >= 0 ? 'var(--green)' : 'var(--red)'; }
+  set('res-reclamado', '$0');
+  set('res-pendiente', '$'+totalGanado);
+}
+
+// ── HISTORY ───────────────────────────────────────────
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  renderHistory();
+}
+
+function renderHistory() {
+  const q = (document.getElementById('search-input').value||'').toLowerCase().trim();
+  const el = document.getElementById('history-list');
+  const allSorteos = [...DB.sorteos].reverse();
+
+  if (!allSorteos.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div>Sin sorteos</div></div>';
+    return;
+  }
+
+  el.innerHTML = allSorteos.map(sorteo => {
+    const isActive = !sorteo.closed;
+    let facturas = sorteo.facturas || [];
+    if (currentFilter === 'vil')          facturas = facturas.filter(f => f.items.some(i => i.type==='vil'));
+    else if (currentFilter === 'billete') facturas = facturas.filter(f => f.items.some(i => i.type==='billete'));
+    else if (currentFilter === 'winner')  facturas = facturas.filter(f => f.items.some(i => isWinnerInSorteo(i.number, i.type, sorteo)));
+    if (q) facturas = facturas.filter(f => f.items.some(i => i.number.includes(q)));
+
+    const totalSorteo = (sorteo.facturas||[]).flatMap(f=>f.items).reduce((s,i)=>s+i.total,0);
+
+    const facturasHtml = facturas.length === 0
+      ? '<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px;">Sin facturas coinciden</div>'
+      : [...facturas].reverse().map((f) => {
+          const dbIdx = (sorteo.facturas||[]).findIndex(x => x.id === f.id);
+          const d = new Date(f.date);
+          const total = f.items.reduce((s,i)=>s+i.total,0);
+          const hasWinner = f.items.some(i => isWinnerInSorteo(i.number, i.type, sorteo));
+          const vilesQty = f.items.filter(i=>i.type==='vil').reduce((s,i)=>s+i.qty,0);
+          const billetesQty = f.items.filter(i=>i.type==='billete').reduce((s,i)=>s+i.qty,0);
+
+          const itemsHtml = f.items.map((item, itemIdx) => {
+            const prize = getPrizeInSorteo(item.number, item.type, sorteo);
+            const isW = prize > 0;
+            const editBtns = isActive
+              ? '<button class="fitem-edit-btn" data-sorteo="'+sorteo.id+'" data-dbidx="'+dbIdx+'" data-iidx="'+itemIdx+'" onclick="event.stopPropagation();openEditItem(this)">✏️</button>'
+                +'<button class="fitem-del-btn" data-sorteo="'+sorteo.id+'" data-dbidx="'+dbIdx+'" data-iidx="'+itemIdx+'" onclick="event.stopPropagation();deleteItem(this)">×</button>'
+              : '<span style="font-size:10px;color:var(--muted);">🔒</span>';
+            return '<div class="fitem-row">'
+              +'<div class="fitem-left">'
+              +'<span class="fitem-num">#'+item.number+'</span>'
+              +'<span class="type-chip '+item.type+'">'+item.type.toUpperCase()+'</span>'
+              +'<span class="fitem-qty">×'+item.qty+'</span>'
+              +(isW?'<span class="winner-badge">🏆 $'+(prize*item.qty)+'</span>':'')
+              +'</div>'
+              +'<div class="fitem-right">'
+              +'<span class="fitem-price">$'+item.total.toFixed(2)+'</span>'
+              +editBtns
+              +'</div></div>';
+          }).join('');
+
+          const actionBtns = '<div style="display:grid;grid-template-columns:'+(isActive?'1fr 1fr 1fr':'1fr')+';gap:6px;margin-top:10px;">'
+            +'<button data-sid="'+sorteo.id+'" data-fid="'+f.id+'" onclick="event.stopPropagation();printFacturaById(this)" style="display:flex;align-items:center;justify-content:center;gap:4px;background:rgba(64,144,255,0.1);border:1px solid rgba(64,144,255,0.25);color:var(--blue);border-radius:8px;padding:7px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;">🖨️ Imprimir</button>'
+            +(isActive
+              ? '<button data-sorteo="'+sorteo.id+'" data-dbidx="'+dbIdx+'" onclick="event.stopPropagation();openAddItem(this)" style="display:flex;align-items:center;justify-content:center;gap:4px;background:rgba(48,208,96,0.1);border:1px solid rgba(48,208,96,0.25);color:var(--green);border-radius:8px;padding:7px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;">➕ Agregar</button>'
+              +'<button data-sorteo="'+sorteo.id+'" data-dbidx="'+dbIdx+'" onclick="event.stopPropagation();deleteFactura(this)" style="display:flex;align-items:center;justify-content:center;gap:4px;background:rgba(240,80,80,0.1);border:1px solid rgba(240,80,80,0.25);color:var(--red);border-radius:8px;padding:7px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;">🗑️ Eliminar</button>'
+              : '')
+            +'</div>';
+
+          const uid = sorteo.id+'-'+dbIdx;
+          return '<div class="factura-card'+(hasWinner?' winner-factura':'')+'">'
+            +'<div class="factura-card-header" onclick="toggleFactura(\'fbody-'+uid+'\')">'
+            +'<div><div style="display:flex;align-items:center;gap:8px;">'
+            +'<span style="font-family:\'DM Serif Display\',serif;font-size:15px">'+f.id+'</span>'
+            +(hasWinner?'<span class="winner-badge">🏆</span>':'')
+            +'</div>'
+            +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'
+            +d.toLocaleDateString('es-PA')+' '+d.toLocaleTimeString('es-PA',{hour:'2-digit',minute:'2-digit'})
+            +' · '+(vilesQty>0?vilesQty+' vil'+(vilesQty>1?'es':''):'')
+            +(vilesQty>0&&billetesQty>0?' + ':'')
+            +(billetesQty>0?billetesQty+' billete'+(billetesQty>1?'s':''):'')
+            +'</div></div>'
+            +'<div style="text-align:right;">'
+            +'<div style="font-family:\'DM Mono\',monospace;font-size:17px;color:var(--green);">$'+total.toFixed(2)+'</div>'
+            +'<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+f.items.length+' ítem(s)</div>'
+            +'</div></div>'
+            +'<div class="factura-card-body" id="fbody-'+uid+'" style="display:none;">'
+            +itemsHtml+actionBtns
+            +'</div></div>';
+        }).join('');
+
+    const sesionId = 'sesion-' + sorteo.id;
+    const isCollapsed = !isActive; // Closed sessions start collapsed
+    const chevronStyle = 'transition:transform 0.2s;' + (isCollapsed ? '' : 'transform:rotate(180deg);');
+    const facturasContainerStyle = isCollapsed ? 'display:none;' : '';
+
+    return '<div style="margin-bottom:18px;">'
+      +'<div ' + (isActive ? '' : 'onclick="toggleSesion(\'' + sesionId + '\')"') + ' style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:10px 12px;background:'+(isActive?'rgba(240,192,64,0.06)':'rgba(40,40,60,0.4)')+';border:1px solid '+(isActive?'rgba(240,192,64,0.2)':'var(--border)')+';border-radius:10px;' + (isActive ? '' : 'cursor:pointer;user-select:none;') + '">'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-family:\'DM Serif Display\',serif;font-size:14px;color:'+(isActive?'var(--gold)':'var(--muted)')+'">'+sorteo.label+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:1px;">'+sorteo.id+' · '+(sorteo.facturas||[]).length+' facturas · $'+totalSorteo.toFixed(2)+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">'
+      +(isActive
+        ? '<span style="font-size:10px;background:rgba(48,208,96,0.15);border:1px solid rgba(48,208,96,0.3);color:var(--green);border-radius:5px;padding:3px 7px;font-weight:600;">ACTIVO</span>'
+        : '<span style="font-size:10px;background:rgba(100,100,140,0.2);border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:3px 7px;">🔒 CERRADO</span>'
+        + '<svg id="chev-'+sesionId+'" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="' + chevronStyle + 'color:var(--muted);"><polyline points="6 9 12 15 18 9"/></svg>'
+      )
+      +'</div>'
+      +'</div>'
+      +'<div id="' + sesionId + '" style="' + facturasContainerStyle + '">'
+      +facturasHtml
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function toggleSesion(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const chev = document.getElementById('chev-' + id);
+  const isHidden = el.style.display === 'none';
+  el.style.display = isHidden ? '' : 'none';
+  if (chev) chev.style.transform = isHidden ? 'rotate(180deg)' : '';
+}
+
+// ── REPORTE DE VENTAS PASADAS ─────────────────────────
+function openReportModal() {
+  const body = document.getElementById('report-body');
+  body.innerHTML = buildReportHTML();
+  document.getElementById('report-modal').classList.add('open');
+}
+
+function closeReportModal() {
+  document.getElementById('report-modal').classList.remove('open');
+}
+
+function buildReportHTML() {
+  const closed = (DB.sorteos || []).filter(s => s.closed);
+  if (!closed.length) {
+    return '<div class="card" style="text-align:center;padding:30px 18px;">'
+      + '<div style="font-size:38px;margin-bottom:10px;">📭</div>'
+      + '<div style="font-family:\'DM Serif Display\',serif;font-size:16px;margin-bottom:6px;">Aún no hay sesiones cerradas</div>'
+      + '<div style="font-size:12px;color:var(--muted);">Cuando cierres tu primer sorteo, aparecerá el informe aquí.</div>'
+      + '</div>';
+  }
+  // Sort newest first
+  const sorted = [...closed].sort((a, b) => {
+    const ta = new Date(a.fechaCreado || a.fechaJuego || 0).getTime();
+    const tb = new Date(b.fechaCreado || b.fechaJuego || 0).getTime();
+    return tb - ta;
+  });
+
+  // Aggregate global totals
+  let totalRecaudado = 0;
+  let totalFacturas = 0;
+  let totalPedazosVil = 0;
+  let totalPedazosBil = 0;
+  let totalGanado = 0;
+  // Frequency maps
+  const vilFreq = {};   // number -> total qty
+  const bilFreq = {};
+
+  sorted.forEach(s => {
+    const facturas = s.facturas || [];
+    totalFacturas += facturas.length;
+    facturas.forEach(f => {
+      (f.items || []).forEach(it => {
+        totalRecaudado += it.total || 0;
+        if (it.type === 'vil') {
+          totalPedazosVil += it.qty;
+          vilFreq[it.number] = (vilFreq[it.number] || 0) + it.qty;
+        } else {
+          totalPedazosBil += it.qty;
+          bilFreq[it.number] = (bilFreq[it.number] || 0) + it.qty;
+        }
+      });
+    });
+    // Calculate prizes paid for this sorteo
+    const w = s.winners;
+    if (w && w.p1) {
+      facturas.forEach(f => {
+        (f.items || []).forEach(it => {
+          let prize = 0;
+          if (it.type === 'billete') prize = calcBilletePrize(it.number, w.p1, w.p2, w.p3);
+          else prize = calcVilPrize(it.number, w.p1, w.p2, w.p3);
+          totalGanado += prize * it.qty;
+        });
+      });
+    }
+  });
+
+  const totalPyG = totalRecaudado - totalGanado;
+  const pad = n => String(n).padStart(2, '0');
+  const fmtDate = d => {
+    if (!d) return '—';
+    const dt = new Date(d);
+    return dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate());
+  };
+
+  // Top numbers
+  const topVil = Object.entries(vilFreq).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+  const topBil = Object.entries(bilFreq).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+
+  let html = '';
+
+  // Resumen global
+  html += '<div class="card" style="margin-bottom:12px;">';
+  html += '<div class="card-title">Resumen global</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+  html += '<div style="background:var(--surface2);padding:10px;border-radius:8px;border:1px solid var(--border);">'
+       + '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Sorteos cerrados</div>'
+       + '<div style="font-size:20px;font-weight:700;font-family:\'DM Serif Display\',serif;">' + sorted.length + '</div></div>';
+  html += '<div style="background:var(--surface2);padding:10px;border-radius:8px;border:1px solid var(--border);">'
+       + '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Facturas</div>'
+       + '<div style="font-size:20px;font-weight:700;font-family:\'DM Serif Display\',serif;">' + totalFacturas + '</div></div>';
+  html += '<div style="background:var(--surface2);padding:10px;border-radius:8px;border:1px solid var(--border);">'
+       + '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Chances vendidos</div>'
+       + '<div style="font-size:20px;font-weight:700;font-family:\'DM Serif Display\',serif;">' + totalPedazosVil + '</div></div>';
+  html += '<div style="background:var(--surface2);padding:10px;border-radius:8px;border:1px solid var(--border);">'
+       + '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Billetes vendidos</div>'
+       + '<div style="font-size:20px;font-weight:700;font-family:\'DM Serif Display\',serif;">' + totalPedazosBil + '</div></div>';
+  html += '</div>';
+  html += '<div style="margin-top:10px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;">'
+       + '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span>Total recaudado</span><strong style="color:var(--gold);">$' + totalRecaudado.toFixed(2) + '</strong></div>'
+       + '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span>Total premios pagados</span><strong style="color:var(--red);">$' + totalGanado.toFixed(2) + '</strong></div>'
+       + '<div style="display:flex;justify-content:space-between;font-size:14px;border-top:1px solid var(--border);padding-top:6px;margin-top:6px;"><span><strong>Ganancia neta</strong></span><strong style="color:' + (totalPyG >= 0 ? 'var(--green)' : 'var(--red)') + ';font-family:\'DM Mono\',monospace;font-size:16px;">$' + totalPyG.toFixed(2) + '</strong></div>'
+       + '</div>';
+  html += '</div>';
+
+  // Top números más vendidos
+  if (topVil.length || topBil.length) {
+    html += '<div class="card" style="margin-bottom:12px;">';
+    html += '<div class="card-title">Números más vendidos</div>';
+    if (topVil.length) {
+      html += '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Chance (top 5)</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">';
+      topVil.forEach(([num, qty]) => {
+        html += '<div style="background:rgba(64,144,255,0.1);border:1px solid rgba(64,144,255,0.25);border-radius:8px;padding:6px 10px;font-size:12px;">'
+             + '<strong style="color:var(--blue);font-family:\'DM Mono\',monospace;">#' + num + '</strong>'
+             + ' <span style="color:var(--muted);">×' + qty + '</span></div>';
+      });
+      html += '</div>';
+    }
+    if (topBil.length) {
+      html += '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Billete (top 5)</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      topBil.forEach(([num, qty]) => {
+        html += '<div style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.25);border-radius:8px;padding:6px 10px;font-size:12px;">'
+             + '<strong style="color:var(--gold);font-family:\'DM Mono\',monospace;">#' + num + '</strong>'
+             + ' <span style="color:var(--muted);">×' + qty + '</span></div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Detalle por sorteo
+  html += '<div class="card">';
+  html += '<div class="card-title">Detalle por sorteo</div>';
+  sorted.forEach((s, idx) => {
+    const facturas = s.facturas || [];
+    const items = facturas.flatMap(f => f.items || []);
+    const recaudado = items.reduce((acc, it) => acc + (it.total || 0), 0);
+    const numChances = items.filter(it => it.type === 'vil').reduce((a, b) => a + b.qty, 0);
+    const numBilletes = items.filter(it => it.type === 'billete').reduce((a, b) => a + b.qty, 0);
+    let ganado = 0;
+    const w = s.winners;
+    if (w && w.p1) {
+      items.forEach(it => {
+        let p = 0;
+        if (it.type === 'billete') p = calcBilletePrize(it.number, w.p1, w.p2, w.p3);
+        else p = calcVilPrize(it.number, w.p1, w.p2, w.p3);
+        ganado += p * it.qty;
+      });
+    }
+    const pyg = recaudado - ganado;
+    const sId = 'rep-sorteo-' + idx;
+
+    html += '<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden;">';
+    html += '<button onclick="document.getElementById(\'' + sId + '\').classList.toggle(\'open\');this.querySelector(\'.chevron\').classList.toggle(\'rotated\')" '
+         + 'style="width:100%;background:var(--surface2);border:none;color:var(--text);padding:12px;text-align:left;cursor:pointer;font-family:inherit;display:flex;justify-content:space-between;align-items:center;gap:10px;">';
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div style="font-weight:600;font-size:13px;">' + (s.label || 'Sorteo') + '</div>';
+    html += '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + fmtDate(s.fechaJuego || s.fechaCreado) + ' · ' + facturas.length + ' facturas · $' + recaudado.toFixed(2) + '</div>';
+    html += '</div>';
+    html += '<svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>';
+    html += '</button>';
+
+    html += '<div id="' + sId + '" class="rep-content" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease;">';
+    html += '<div style="padding:12px;border-top:1px solid var(--border);font-size:12px;">';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">';
+    html += '<div style="background:rgba(64,144,255,0.08);padding:8px;border-radius:6px;text-align:center;"><div style="font-size:10px;color:var(--muted);">Chances</div><strong style="font-size:14px;">' + numChances + '</strong></div>';
+    html += '<div style="background:rgba(212,175,55,0.08);padding:8px;border-radius:6px;text-align:center;"><div style="font-size:10px;color:var(--muted);">Billetes</div><strong style="font-size:14px;">' + numBilletes + '</strong></div>';
+    html += '</div>';
+    if (w && w.p1) {
+      html += '<div style="background:var(--surface2);padding:8px;border-radius:6px;margin-bottom:8px;font-size:11px;">';
+      html += '<div style="display:flex;justify-content:space-between;"><span>🥇 1°:</span><strong>' + (w.p1 || '----') + '</strong></div>';
+      html += '<div style="display:flex;justify-content:space-between;"><span>🥈 2°:</span><strong>' + (w.p2 || '----') + '</strong></div>';
+      html += '<div style="display:flex;justify-content:space-between;"><span>🥉 3°:</span><strong>' + (w.p3 || '----') + '</strong></div>';
+      html += '</div>';
+    } else {
+      html += '<div style="background:var(--surface2);padding:8px;border-radius:6px;margin-bottom:8px;font-size:11px;color:var(--muted);text-align:center;">Sin números premiados registrados</div>';
+    }
+    html += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;"><span>Recaudado</span><strong style="color:var(--gold);">$' + recaudado.toFixed(2) + '</strong></div>';
+    html += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;"><span>Premios pagados</span><strong style="color:var(--red);">$' + ganado.toFixed(2) + '</strong></div>';
+    html += '<div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-top:1px solid var(--border);margin-top:4px;"><strong>Ganancia</strong><strong style="color:' + (pyg >= 0 ? 'var(--green)' : 'var(--red)') + ';">$' + pyg.toFixed(2) + '</strong></div>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // Style for collapsible content
+  html += '<style>.rep-content.open{max-height:600px;}.chevron.rotated{transform:rotate(180deg);}</style>';
+
+  return html;
+}
+
+function toggleFactura(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function printFacturaById(btn) {
+  const sid = btn.getAttribute('data-sid');
+  const fid = btn.getAttribute('data-fid');
+  const sorteo = DB.sorteos.find(s => s.id === sid);
+  if (!sorteo) return;
+  const factura = (sorteo.facturas||[]).find(f => f.id === fid);
+  if (!factura) return;
+  if (!PRINTER.connected) {
+    showToast('Conecta la impresora primero', 'error');
+    return;
+  }
+  (async () => {
+    try {
+      await PRINTER.printFactura(factura, sorteo);
+      showToast('✓ Factura reimpresa');
+    } catch (e) {
+      console.error(e);
+      showToast('Error al imprimir: ' + e.message, 'error');
+    }
+  })();
+}
+
+function getSorteoForBtn(btn) {
+  const sorteoId = btn.getAttribute('data-sorteo');
+  if (sorteoId) return DB.sorteos.find(s => s.id === sorteoId) || null;
+  return DB.activeSorteo;
+}
+function saveSorteo(sorteo) {
+  const sorteos = DB.sorteos;
+  const idx = sorteos.findIndex(s => s.id === sorteo.id);
+  if (idx >= 0) { sorteos[idx] = sorteo; DB.sorteos = sorteos; }
+}
+
+function deleteFactura(btn) {
+  const sorteo = getSorteoForBtn(btn);
+  if (!sorteo || sorteo.closed) return;
+  const dbIdx = parseInt(btn.getAttribute('data-dbidx'));
+  showConfirm('¿Eliminar esta factura y todos sus ítems?', function() {
+    sorteo.facturas.splice(dbIdx, 1);
+    saveSorteo(sorteo);
+    renderHistory(); updateHome();
+    showToast('Factura eliminada');
+  });
+}
+
+function deleteItem(btn) {
+  const sorteo = getSorteoForBtn(btn);
+  if (!sorteo || sorteo.closed) return;
+  const dbIdx = parseInt(btn.getAttribute('data-dbidx'));
+  const itemIdx = parseInt(btn.getAttribute('data-iidx'));
+  const f = sorteo.facturas[dbIdx];
+  if (!f) return;
+  if (f.items.length === 1) {
+    showConfirm('Es el único ítem. ¿Eliminar la factura completa?', function() {
+      sorteo.facturas.splice(dbIdx, 1);
+      saveSorteo(sorteo);
+      renderHistory(); updateHome();
+      showToast('Factura eliminada');
+    });
+  } else {
+    f.items.splice(itemIdx, 1);
+    saveSorteo(sorteo);
+    renderHistory(); updateHome();
+    showToast('Ítem eliminado');
+  }
+}
+
+// ── EDIT MODAL ───────────────────────────────────────
+let editCtx = null;
+
+function openEditItem(btn) {
+  const sorteo = getSorteoForBtn(btn);
+  if (!sorteo) return;
+  const dbIdx = parseInt(btn.getAttribute('data-dbidx'));
+  const itemIdx = parseInt(btn.getAttribute('data-iidx'));
+  const f = sorteo.facturas[dbIdx];
+  if (!f) return;
+  const item = f.items[itemIdx];
+  editCtx = { sorteoId: sorteo.id, dbIdx, itemIdx };
+  document.getElementById('modal-fid').textContent = f.id;
+  document.getElementById('edit-number').value = item.number;
+  document.getElementById('edit-qty').value = item.qty;
+  document.getElementById('edit-type-vil').className    = 'toggle-btn vil'+(item.type==='vil'?' active':'');
+  document.getElementById('edit-type-billete').className= 'toggle-btn billete'+(item.type==='billete'?' active':'');
+  document.getElementById('edit-modal').classList.add('open');
+  updateEditTotal();
+}
+
+function openAddItem(btn) {
+  const sorteo = getSorteoForBtn(btn);
+  if (!sorteo) return;
+  const dbIdx = parseInt(btn.getAttribute('data-dbidx'));
+  const f = sorteo.facturas[dbIdx];
+  if (!f) return;
+  editCtx = { sorteoId: sorteo.id, dbIdx, itemIdx: -1 };
+  document.getElementById('modal-fid').textContent = f.id;
+  document.getElementById('edit-number').value = '';
+  document.getElementById('edit-qty').value = 1;
+  document.getElementById('edit-type-vil').className = 'toggle-btn vil active';
+  document.getElementById('edit-type-billete').className = 'toggle-btn billete';
+  document.getElementById('edit-modal').classList.add('open');
+  updateEditTotal();
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').classList.remove('open');
+  editCtx = null;
+}
+
+function getEditType() {
+  return document.getElementById('edit-type-vil').classList.contains('active') ? 'vil' : 'billete';
+}
+
+function setEditType(type) {
+  document.getElementById('edit-type-vil').className    = 'toggle-btn vil'+(type==='vil'?' active':'');
+  document.getElementById('edit-type-billete').className= 'toggle-btn billete'+(type==='billete'?' active':'');
+  updateEditTotal();
+}
+
+function updateEditTotal() {
+  const type = getEditType();
+  const numLen = NUM_LEN[type];
+  const raw = document.getElementById('edit-number').value.trim();
+  const qty  = parseInt(document.getElementById('edit-qty').value) || 1;
+  const valid = raw.length === numLen;
+  const total = valid ? PRICES[type] * qty : 0;
+  document.getElementById('edit-total').textContent = valid ? '$'+total.toFixed(2) : '—';
+  document.getElementById('edit-hint').textContent = 'Número de '+numLen+' dígitos · $'+PRICES[type].toFixed(2)+' c/u';
+}
+
+function saveEditItem() {
+  if (!editCtx) return;
+  const type = getEditType();
+  const numLen = NUM_LEN[type];
+  const raw = document.getElementById('edit-number').value.trim();
+  const qty = parseInt(document.getElementById('edit-qty').value) || 1;
+  if (raw.length !== numLen) { showToast('Número debe tener '+numLen+' dígitos','error'); return; }
+  if (qty < 1) { showToast('Cantidad inválida','error'); return; }
+  const sorteos = DB.sorteos;
+  const sorteo = sorteos.find(s => s.id === editCtx.sorteoId);
+  if (!sorteo) return;
+  const f = sorteo.facturas[editCtx.dbIdx];
+  if (!f) return;
+  const newItem = { id: Date.now()+Math.random(), number: raw, type, qty, price: PRICES[type], total: PRICES[type]*qty };
+  if (editCtx.itemIdx === -1) {
+    f.items.push(newItem);
+    showToast('Ítem agregado');
+  } else {
+    f.items[editCtx.itemIdx] = newItem;
+    showToast('Ítem actualizado');
+  }
+  DB.sorteos = sorteos;
+  closeEditModal();
+  renderHistory(); updateHome();
+}
+
+// ── CONFIRM ───────────────────────────────────────────
+let confirmCallback = null;
+function showConfirm(msg, cb) {
+  confirmCallback = cb;
+  document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-dialog').classList.add('open');
+}
+function closeConfirm(yes) {
+  document.getElementById('confirm-dialog').classList.remove('open');
+  if (yes && confirmCallback) confirmCallback();
+  confirmCallback = null;
+}
+
+// ── WINNERS ───────────────────────────────────────────
+function getBilletePrizes() { return CFG.get().billetePremios; }
+function getVilPrizes()     { return CFG.get().vilPremios; }
+
+function getPremios() {
+  return {
+    p1: (document.getElementById('w-1st').value||'').trim().padStart(4,'0'),
+    p2: (document.getElementById('w-2nd').value||'').trim().padStart(4,'0'),
+    p3: (document.getElementById('w-3rd').value||'').trim().padStart(4,'0'),
+  };
+}
+
+function calcBilletePrize(num, p1, p2, p3) {
+  if (!num || num.length !== 4) return 0;
+  const P = getBilletePrizes();
+  let total = 0;
+  if (num === p1) total += P.exact1st;
+  if (num === p2) total += P.exact2nd;
+  if (num === p3) total += P.exact3rd;
+  if (num.slice(0,3) === p1.slice(0,3) && num !== p1) total += P.pri3_1st;
+  if (num.slice(1,4) === p1.slice(1,4) && num !== p1) total += P.ult3_1st;
+  if (num.slice(0,2) === p1.slice(0,2) && num !== p1) total += P.pri2_1st;
+  if (num.slice(2,4) === p1.slice(2,4) && num !== p1) total += P.ult2_1st;
+  if (num.slice(3,4) === p1.slice(3,4) && num !== p1) total += P.ult1_1st;
+  if (num.slice(0,3) === p2.slice(0,3) && num !== p2) total += P.pri3_2nd;
+  if (num.slice(1,4) === p2.slice(1,4) && num !== p2) total += P.ult3_2nd;
+  if (num.slice(2,4) === p2.slice(2,4) && num !== p2) total += P.ult2_2nd;
+  if (num.slice(0,3) === p3.slice(0,3) && num !== p3) total += P.pri3_3rd;
+  if (num.slice(1,4) === p3.slice(1,4) && num !== p3) total += P.ult3_3rd;
+  if (num.slice(2,4) === p3.slice(2,4) && num !== p3) total += P.ult2_3rd;
+  return total;
+}
+
+function calcVilPrize(num, p1, p2, p3) {
+  if (!num || num.length !== 2) return 0;
+  const V = getVilPrizes();
+  let total = 0;
+  if (num === p1.slice(2,4)) total += V.p1;
+  if (num === p2.slice(2,4)) total += V.p2;
+  if (num === p3.slice(2,4)) total += V.p3;
+  return total;
+}
+
+function onPremioInput() {
+  const { p1, p2, p3 } = getPremios();
+  if (p1.replace(/^0+/,'') || p2.replace(/^0+/,'') || p3.replace(/^0+/,'')) {
+    DB.winners = { p1, p2, p3 };
+  }
+  updateHome();
+}
+
+function calcularGanadores() {
+  const { p1, p2, p3 } = getPremios();
+  if (!document.getElementById('w-1st').value && !document.getElementById('w-2nd').value && !document.getElementById('w-3rd').value) {
+    showToast('Ingresa al menos un premio','error'); return;
+  }
+  DB.winners = { p1, p2, p3 };
+  const preview = document.getElementById('premios-preview');
+  const list = document.getElementById('derivaciones-list');
+  preview.style.display = '';
+  const _BP = CFG.get().billetePremios;
+  const _VP = CFG.get().vilPremios;
+  const rows = [
+    { label: '🥇 Primer exacto', num: p1, prize: '$'+(_BP.exact1st||2000) },
+    { label: '— 3 primeras', num: p1.slice(0,3)+'X', prize: '$'+(_BP.pri3_1st||50) },
+    { label: '— 3 últimas', num: 'X'+p1.slice(1,4), prize: '$'+(_BP.ult3_1st||50) },
+    { label: '— 2 primeras', num: p1.slice(0,2)+'XX', prize: '$'+(_BP.pri2_1st||3) },
+    { label: '— 2 últimas', num: 'XX'+p1.slice(2,4), prize: '$'+(_BP.ult2_1st||3) },
+    { label: '— 1 última', num: 'XXX'+p1.slice(3,4), prize: '$'+(_BP.ult1_1st||1) },
+    { label: '🥈 Segundo exacto', num: p2, prize: '$'+(_BP.exact2nd||600) },
+    { label: '— 3 primeras', num: p2.slice(0,3)+'X', prize: '$'+(_BP.pri3_2nd||20) },
+    { label: '— 3 últimas', num: 'X'+p2.slice(1,4), prize: '$'+(_BP.ult3_2nd||20) },
+    { label: '— 2 últimas', num: 'XX'+p2.slice(2,4), prize: '$'+(_BP.ult2_2nd||2) },
+    { label: '🥉 Tercer exacto', num: p3, prize: '$'+(_BP.exact3rd||300) },
+    { label: '— 3 primeras', num: p3.slice(0,3)+'X', prize: '$'+(_BP.pri3_3rd||10) },
+    { label: '— 3 últimas', num: 'X'+p3.slice(1,4), prize: '$'+(_BP.ult3_3rd||10) },
+    { label: '— 2 últimas', num: 'XX'+p3.slice(2,4), prize: '$'+(_BP.ult2_3rd||1) },
+    { label: 'Viles 1er', num: p1.slice(2,4), prize: '$'+(_VP.p1||14) },
+    { label: 'Viles 2do', num: p2.slice(2,4), prize: '$'+(_VP.p2||3) },
+    { label: 'Viles 3er', num: p3.slice(2,4), prize: '$'+(_VP.p3||2) },
+  ];
+  list.innerHTML = rows.map(r =>
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">'
+    +'<div>'
+    +'<div style="font-size:12px;color:var(--muted)">'+r.label+'</div>'
+    +'<div style="font-family:\'DM Mono\',monospace;font-size:13px;color:var(--gold)">#'+r.num+'</div>'
+    +'</div>'
+    +'<div style="font-family:\'DM Mono\',monospace;font-size:14px;color:var(--green);font-weight:600;">'+r.prize+'</div>'
+    +'</div>'
+  ).join('');
+  renderWinnersScreen();
+  updateHome();
+  showToast('Ganadores calculados');
+}
+
+function renderWinnersScreen() {
+  // Check if there is an active (open) sorteo — if so, lock prize entry
+  const inputZone = document.getElementById('winners-input-zone');
+  const lockedNotice = document.getElementById('winners-locked-notice');
+  const previewEl = document.getElementById('premios-preview');
+  const activeSorteo = (DB.sorteos || []).find(s => !s.closed);
+  if (activeSorteo) {
+    inputZone.style.display = 'none';
+    if (previewEl) previewEl.style.display = 'none';
+    lockedNotice.style.display = '';
+    const info = document.getElementById('winners-locked-info');
+    if (info) {
+      let msg = '<strong style="color:var(--text);">' + (activeSorteo.label || 'Sorteo activo') + '</strong>';
+      if (activeSorteo.fechaJuego) {
+        const d = new Date(activeSorteo.fechaJuego);
+        const pad = n => String(n).padStart(2,'0');
+        msg += '<br>Cierra: ' + d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      }
+      info.innerHTML = msg;
+    }
+    // Clear the found list too
+    const foundEl = document.getElementById('winners-found-list');
+    if (foundEl) foundEl.innerHTML = '';
+    return;
+  }
+  // No active sorteo — show input zone
+  inputZone.style.display = '';
+  lockedNotice.style.display = 'none';
+
+  const wData = DB.winners;
+  const foundEl = document.getElementById('winners-found-list');
+  if (!wData || typeof wData !== 'object' || !wData.p1) { foundEl.innerHTML = ''; return; }
+  if (document.getElementById('w-1st').value === '') {
+    document.getElementById('w-1st').value = wData.p1 && wData.p1 !== '0000' ? wData.p1 : '';
+    document.getElementById('w-2nd').value = wData.p2 && wData.p2 !== '0000' ? wData.p2 : '';
+    document.getElementById('w-3rd').value = wData.p3 && wData.p3 !== '0000' ? wData.p3 : '';
+  }
+  const { p1, p2, p3 } = wData;
+  const allItems = DB.facturas.flatMap(f => f.items);
+  let ganadores = [];
+  allItems.forEach(item => {
+    let prize = 0;
+    if (item.type === 'billete') prize = calcBilletePrize(item.number, p1, p2, p3);
+    else if (item.type === 'vil') prize = calcVilPrize(item.number, p1, p2, p3);
+    if (prize > 0) ganadores.push({ ...item, prizePerUnit: prize, prizeTotal: prize * item.qty });
+  });
+  if (!ganadores.length) {
+    foundEl.innerHTML = '<div class="card" style="text-align:center;padding:24px"><div style="font-size:32px;margin-bottom:6px">🔍</div><div style="color:var(--muted);font-size:13px">Ningún número vendido coincide con los premios</div></div>';
+    return;
+  }
+  const totalPremios = ganadores.reduce((s,g) => s + g.prizeTotal, 0);
+  foundEl.innerHTML = '<div class="card">'
+    +'<div class="card-title">Ganadores identificados</div>'
+    + ganadores.map(g =>
+      '<div class="ticket-item winner" style="margin-bottom:6px">'
+      +'<div class="ticket-num">#'+g.number+'</div>'
+      +'<div class="ticket-info">'
+      +'<div style="display:flex;align-items:center;gap:6px"><span class="type-chip '+g.type+'">'+g.type.toUpperCase()+'</span>'
+      +'<span style="font-size:12px;color:var(--muted)">×'+g.qty+'</span></div>'
+      +'<div style="font-size:11px;color:var(--gold);margin-top:2px">$'+g.prizePerUnit+' c/u</div>'
+      +'</div>'
+      +'<div style="text-align:right">'
+      +'<div style="font-family:\'DM Mono\',monospace;font-size:15px;color:var(--green);font-weight:600;">$'+g.prizeTotal.toFixed(2)+'</div>'
+      +'<div class="winner-badge" style="margin-top:3px">🏆</div>'
+      +'</div>'
+      +'</div>'
+    ).join('')
+    +'<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);margin-top:10px;padding-top:12px">'
+    +'<span style="font-size:13px;font-weight:600;">Total a pagar</span>'
+    +'<span style="font-family:\'DM Mono\',monospace;font-size:20px;color:var(--gold);font-weight:600;">$'+totalPremios.toFixed(2)+'</span>'
+    +'</div>'
+    +'</div>';
+}
+
+// ── PASSWORD SYSTEM ───────────────────────────────────
+let cfgUnlocked = false;
+
+function hashPwd(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8,'0');
+}
+
+function getStoredHash() {
+  return localStorage.getItem('lp_pwdhash') || hashPwd('Elp0022--');
+}
+
+function unlockConfig() {
+  const input = document.getElementById('cfg-pwd-input').value;
+  const errEl = document.getElementById('cfg-pwd-error');
+  if (hashPwd(input) === getStoredHash()) {
+    cfgUnlocked = true;
+    document.getElementById('cfg-lock-screen').style.display = 'none';
+    document.getElementById('cfg-protected').style.display = '';
+    document.getElementById('cfg-pwd-input').value = '';
+    errEl.textContent = '';
+    loadProtectedFields();
+  } else {
+    errEl.textContent = '❌ Contraseña incorrecta';
+    document.getElementById('cfg-pwd-input').value = '';
+    setTimeout(() => { errEl.textContent = ''; }, 2500);
+  }
+}
+
+function lockConfig() {
+  cfgUnlocked = false;
+  document.getElementById('cfg-lock-screen').style.display = '';
+  document.getElementById('cfg-protected').style.display = 'none';
+}
+
+function togglePwdVisibility() {
+  const inp = document.getElementById('cfg-pwd-input');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function changePassword() {
+  const p1 = document.getElementById('cfg-new-pwd').value;
+  const p2 = document.getElementById('cfg-new-pwd2').value;
+  if (!p1) { showToast('Escribe una nueva contraseña','error'); return; }
+  if (p1 !== p2) { showToast('Las contraseñas no coinciden','error'); return; }
+  if (p1.length < 6) { showToast('Mínimo 6 caracteres','error'); return; }
+  localStorage.setItem('lp_pwdhash', hashPwd(p1));
+  document.getElementById('cfg-new-pwd').value = '';
+  document.getElementById('cfg-new-pwd2').value = '';
+  showToast('Contraseña cambiada');
+}
+
+function confirmClearHistory() {
+  const closed = (DB.sorteos || []).filter(s => s.closed);
+  if (!closed.length) {
+    showToast('No hay sesiones cerradas para borrar');
+    return;
+  }
+  showConfirm(
+    '¿Borrar ' + closed.length + ' sesion(es) cerrada(s)? Esta acción NO se puede deshacer. El sorteo activo NO se borra.',
+    function() {
+      // Keep only sorteos that are NOT closed (i.e., the active one)
+      const remaining = (DB.sorteos || []).filter(s => !s.closed);
+      DB.sorteos = remaining;
+      // Reset cached winners since they came from a closed sorteo
+      DB.winners = null;
+      // Clear winners inputs if visible
+      ['w-1st','w-2nd','w-3rd'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+      updateHome();
+      renderHistory();
+      updateSorteoHeader();
+      updateSellScreenVisibility();
+      showToast('✓ Historial borrado');
+    }
+  );
+}
+
+function loadProtectedFields() {
+  const c = CFG.get();
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.value = val||''; };
+  set('cfg-comision-vendedor', c.comisionVendedor || '');
+  set('cfg-limite-vil',        c.limiteVil || '');
+  set('cfg-limite-billete',    c.limiteBillete || '');
+  set('cfg-vil-p1', c.vilPremios.p1);
+  set('cfg-vil-p2', c.vilPremios.p2);
+  set('cfg-vil-p3', c.vilPremios.p3);
+  const P = c.billetePremios;
+  set('cfg-bl-1st-4c', P.exact1st); set('cfg-bl-1st-3c', P.pri3_1st);
+  set('cfg-bl-1st-2c', P.pri2_1st); set('cfg-bl-1st-1c', P.ult1_1st);
+  set('cfg-bl-2nd-4c', P.exact2nd); set('cfg-bl-2nd-3c', P.pri3_2nd);
+  set('cfg-bl-2nd-2c', P.ult2_2nd);
+  set('cfg-bl-3rd-4c', P.exact3rd); set('cfg-bl-3rd-3c', P.pri3_3rd);
+  set('cfg-bl-3rd-2c', P.ult2_3rd);
+  renderVendedorResumen();
+}
+
+function loadConfigScreen() {
+  lockConfig();
+  const c = CFG.get();
+  const el = document.getElementById('cfg-vendedor');
+  if (el) el.value = c.vendedor || '';
+  const pv = document.getElementById('cfg-precio-vil');
+  if (pv) pv.value = c.precioVil || 0.25;
+  const pb = document.getElementById('cfg-precio-billete');
+  if (pb) pb.value = c.precioBillete || 1.00;
+}
+
+function saveConfig() {
+  const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const num = id => parseFloat(get(id)) || 0;
+  const cfg = {
+    vendedor:          get('cfg-vendedor'),
+    comisionVendedor:  num('cfg-comision-vendedor'),
+    precioVil:         num('cfg-precio-vil') || 0.25,
+    precioBillete:     num('cfg-precio-billete') || 1.00,
+    limiteVil:         num('cfg-limite-vil'),
+    limiteBillete:     num('cfg-limite-billete'),
+    vilPremios: {
+      p1: num('cfg-vil-p1') || 14,
+      p2: num('cfg-vil-p2') || 3,
+      p3: num('cfg-vil-p3') || 2,
+    },
+    billetePremios: {
+      exact1st: num('cfg-bl-1st-4c') || 2000,
+      pri3_1st: num('cfg-bl-1st-3c') || 50,
+      ult3_1st: num('cfg-bl-1st-3c') || 50,
+      pri2_1st: num('cfg-bl-1st-2c') || 3,
+      ult2_1st: num('cfg-bl-1st-2c') || 3,
+      ult1_1st: num('cfg-bl-1st-1c') || 1,
+      exact2nd: num('cfg-bl-2nd-4c') || 600,
+      pri3_2nd: num('cfg-bl-2nd-3c') || 20,
+      ult3_2nd: num('cfg-bl-2nd-3c') || 20,
+      ult2_2nd: num('cfg-bl-2nd-2c') || 2,
+      exact3rd: num('cfg-bl-3rd-4c') || 300,
+      pri3_3rd: num('cfg-bl-3rd-3c') || 10,
+      ult3_3rd: num('cfg-bl-3rd-3c') || 10,
+      ult2_3rd: num('cfg-bl-3rd-2c') || 1,
+    }
+  };
+  CFG.set(cfg);
+  renderVendedorResumen();
+}
+
+function renderVendedorResumen() {
+  const c = CFG.get();
+  const resumenEl = document.getElementById('cfg-resumen-vendedor');
+  const contentEl = document.getElementById('cfg-vendedor-resumen-content');
+  if (!resumenEl || !contentEl) return;
+  if (!c.vendedor || !c.comisionVendedor) { resumenEl.style.display='none'; return; }
+  const sorteo = DB.activeSorteo;
+  if (!sorteo) { resumenEl.style.display='none'; return; }
+  const totalVentas = (sorteo.facturas||[]).flatMap(f=>f.items).reduce((s,i)=>s+i.total,0);
+  const totalPremios = (sorteo.facturas||[]).flatMap(f=>f.items).reduce((s,i)=>{
+    const p = getPrizeInSorteo(i.number, i.type, sorteo);
+    return s + p * i.qty;
+  }, 0);
+  const ingreso = totalVentas - totalPremios;
+  const comision = ingreso > 0 ? ingreso * (c.comisionVendedor / 100) : 0;
+  resumenEl.style.display = '';
+  contentEl.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">'
+    +'<div style="color:var(--muted);">Vendedor</div><div style="font-weight:600;">'+c.vendedor+'</div>'
+    +'<div style="color:var(--muted);">Total ventas</div><div style="font-family:\'DM Mono\',monospace;color:var(--green);">$'+totalVentas.toFixed(2)+'</div>'
+    +'<div style="color:var(--muted);">Total premios</div><div style="font-family:\'DM Mono\',monospace;color:var(--red);">$'+totalPremios.toFixed(2)+'</div>'
+    +'<div style="color:var(--muted);">Ingreso neto</div><div style="font-family:\'DM Mono\',monospace;">$'+ingreso.toFixed(2)+'</div>'
+    +'<div style="color:var(--muted);">Comisión ('+c.comisionVendedor+'%)</div>'
+    +'<div style="font-family:\'DM Mono\',monospace;font-size:15px;font-weight:700;color:var(--gold);">$'+comision.toFixed(2)+'</div>'
+    +'</div>';
+}
+
+function checkLimits(number, type, qty) {
+  const c = CFG.get();
+  const limit = type === 'vil' ? c.limiteVil : c.limiteBillete;
+  if (!limit || limit === 0) return true;
+  const sold = DB.facturas.flatMap(f=>f.items)
+    .filter(i => i.number === number && i.type === type)
+    .reduce((s,i)=>s+i.qty, 0);
+  const inCart = cart.filter(i => i.number === number && i.type === type)
+    .reduce((s,i)=>s+i.qty, 0);
+  if (sold + inCart + qty > limit) {
+    showToast('Límite de '+limit+' alcanzado para #'+number,'error');
+    return false;
+  }
+  return true;
+}
+
+// ── NAV ───────────────────────────────────────────────
+function goTo(id, btn) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  // "Nuevo sorteo" button visible only on Sell screen
+  const newSorteoBtn = document.getElementById('btn-nuevo-sorteo');
+  if (newSorteoBtn) newSorteoBtn.style.display = (id === 'sell') ? '' : 'none';
+  if(id==='sell')    updateSellScreenVisibility();
+  if(id==='home')    updateHome();
+  if(id==='history') renderHistory();
+  if(id==='winners') renderWinnersScreen();
+  if(id==='config')  loadConfigScreen();
+}
+
+function updateSellScreenVisibility() {
+  const hasActive = !!ensureActiveSorteo();
+  const notice = document.getElementById('sell-no-sorteo-notice');
+  const zone = document.getElementById('sell-active-zone');
+  const newBtn = document.getElementById('btn-nuevo-sorteo');
+  if (hasActive) {
+    if (notice) notice.style.display = 'none';
+    if (zone) zone.style.display = '';
+    if (newBtn) newBtn.style.display = '';
+  } else {
+    if (notice) notice.style.display = '';
+    if (zone) zone.style.display = 'none';
+    // Hide top "Nuevo sorteo" button — the big call-to-action in the notice is enough
+    if (newBtn) newBtn.style.display = 'none';
+  }
+}
+
+// Note: ensureActiveSorteo() no longer auto-creates. App starts without active sorteo if none exists.
+updateSorteoHeader();
+updateSellScreenVisibility();
+scheduleAutoClose();
+setInterval(updateSorteoHeader, 60000);
+const _cfgInit = CFG.get();
+if (_cfgInit.vendedor) {
+  const sub = document.querySelector('.header-sub');
+  if (sub) sub.textContent = 'Vendedor: ' + _cfgInit.vendedor;
+}
+updateHome();
+updatePrinterStatus();
+// Hide "Nuevo sorteo" button on initial load (initial screen is Home, not Sell)
+const _newSorteoBtnInit = document.getElementById('btn-nuevo-sorteo');
+if (_newSorteoBtnInit) _newSorteoBtnInit.style.display = 'none';
+
+// Open "Chance" collapsible by default
+document.getElementById('col-chance').classList.add('open');
+</script>
+</body>
+</html>

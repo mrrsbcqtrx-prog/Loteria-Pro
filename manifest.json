@@ -2,7 +2,7 @@
   "name": "Lotería Pro",
   "short_name": "Lotería Pro",
   "description": "Aplicación de gestión de lotería con impresión Bluetooth y escáner QR",
-  "start_url": "./loteria-app-v4_3.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

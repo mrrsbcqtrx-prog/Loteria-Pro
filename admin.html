@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lotería Pro · Panel de Administración</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --surface2: #f0f0f3;
+    --border: #d8d8e0;
+    --gold: #b8860b;
+    --green: #1a8838;
+    --red: #c0392b;
+    --blue: #1e6cd8;
+    --text: #1a1a2a;
+    --muted: #6a6a82;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+    font-size: 14px;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  h1 { font-size: 22px; color: var(--gold); }
+  .badge { background: rgba(192,57,43,0.1); color: var(--red); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  input, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--text);
+    font-family: inherit;
+    outline: none;
+  }
+  input:focus, textarea:focus { border-color: var(--gold); }
+  textarea { min-height: 60px; resize: vertical; }
+  .btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.15s;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--gold); color: white; width: 100%; margin-top: 8px; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: rgba(192,57,43,0.1); color: var(--red); border: 1px solid rgba(192,57,43,0.3); }
+  .btn-success { background: rgba(26,136,56,0.1); color: var(--green); border: 1px solid rgba(26,136,56,0.3); }
+  .btn-sm { padding: 6px 10px; font-size: 12px; }
+
+  .lic-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 8px;
+  }
+  .lic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .lic-clave {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 16px;
+    color: var(--gold);
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .lic-status {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .status-pendiente { background: rgba(184,134,11,0.15); color: var(--gold); }
+  .status-activa { background: rgba(26,136,56,0.15); color: var(--green); }
+  .status-revocada { background: rgba(192,57,43,0.15); color: var(--red); }
+  .lic-info { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .lic-info strong { color: var(--text); font-weight: 600; }
+  .lic-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+
+  .alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .alert-success { background: rgba(26,136,56,0.1); color: var(--green); border: 1px solid rgba(26,136,56,0.3); }
+  .alert-error { background: rgba(192,57,43,0.1); color: var(--red); border: 1px solid rgba(192,57,43,0.3); }
+
+  .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 16px; }
+  @media (max-width: 600px) { .stats { grid-template-columns: repeat(2,1fr); } }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+  }
+  .stat-num { font-size: 22px; font-weight: 700; color: var(--gold); }
+  .stat-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+  .login-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 30px;
+    max-width: 380px;
+    width: 100%;
+  }
+  .copy-btn { background: none; border: 1px solid var(--border); padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; color: var(--muted); }
+  .copy-btn:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <h1 style="text-align:center;margin-bottom:6px;">Lotería <span style="font-style:italic;">Pro</span></h1>
+    <p style="text-align:center;color:var(--muted);font-size:12px;margin-bottom:20px;">Panel de Administración</p>
+    <label>Contraseña de admin</label>
+    <input type="password" id="admin-pass" placeholder="••••••••" autofocus>
+    <div id="login-error" style="color:var(--red);font-size:12px;height:18px;margin-top:6px;text-align:center;"></div>
+    <button class="btn btn-primary" onclick="adminLogin()">Entrar</button>
+    <p style="text-align:center;margin-top:14px;font-size:10px;color:var(--muted);">
+      ⚠️ Solo para uso del propietario. Cambia la contraseña en el código (variable ADMIN_PASSWORD).
+    </p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="container" id="app" style="display:none;">
+  <header>
+    <div>
+      <h1>Lotería <em>Pro</em> · Admin</h1>
+      <p style="font-size:11px;color:var(--muted);margin-top:2px;">Gestión de licencias</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="badge">PRIVADO</span>
+      <button class="btn btn-sm btn-secondary" onclick="adminLogout()">Salir</button>
+    </div>
+  </header>
+
+  <div id="alert-success" class="alert alert-success"></div>
+  <div id="alert-error" class="alert alert-error"></div>
+
+  <!-- Estadísticas -->
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-lbl">Total</div></div>
+    <div class="stat"><div class="stat-num" id="stat-pendientes" style="color:var(--gold);">0</div><div class="stat-lbl">Pendientes</div></div>
+    <div class="stat"><div class="stat-num" id="stat-activas" style="color:var(--green);">0</div><div class="stat-lbl">Activas</div></div>
+    <div class="stat"><div class="stat-num" id="stat-revocadas" style="color:var(--red);">0</div><div class="stat-lbl">Revocadas</div></div>
+  </div>
+
+  <!-- Generar nueva licencia -->
+  <div class="card">
+    <div class="card-title">Generar nueva licencia</div>
+    <div class="form-row">
+      <div>
+        <label>Nombre del cliente *</label>
+        <input id="new-name" placeholder="Ej: Juan Pérez">
+      </div>
+      <div>
+        <label>Teléfono / WhatsApp</label>
+        <input id="new-phone" placeholder="Ej: 6000-0000">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>Email (opcional)</label>
+        <input id="new-email" placeholder="cliente@correo.com">
+      </div>
+      <div>
+        <label>Notas (opcional)</label>
+        <input id="new-notes" placeholder="Pago Yappy 28-abr-2026">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="crearLicencia()">Generar clave</button>
+  </div>
+
+  <!-- Lista de licencias -->
+  <div class="card">
+    <div class="card-title">Licencias <span style="color:var(--muted);font-weight:400;">(<span id="list-count">0</span>)</span></div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="btn btn-sm btn-secondary" onclick="setFilter('all')" id="f-all">Todas</button>
+      <button class="btn btn-sm btn-secondary" onclick="setFilter('pendiente')" id="f-pendiente">Pendientes</button>
+      <button class="btn btn-sm btn-secondary" onclick="setFilter('activa')" id="f-activa">Activas</button>
+      <button class="btn btn-sm btn-secondary" onclick="setFilter('revocada')" id="f-revocada">Revocadas</button>
+      <input id="search" placeholder="Buscar por nombre o clave…" style="flex:1;min-width:160px;padding:6px 10px;font-size:12px;" oninput="renderLicencias()">
+      <button class="btn btn-sm btn-secondary" onclick="cargarLicencias()">↻ Recargar</button>
+    </div>
+    <div id="list-container">
+      <p style="text-align:center;color:var(--muted);padding:30px;font-size:13px;">Cargando…</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN — IMPORTANTE: cambia ADMIN_PASSWORD por una contraseña fuerte
+// ═══════════════════════════════════════════════════════════════════════
+const ADMIN_PASSWORD = 'Elp12309zjs'; // ⚠️ CAMBIA ESTO antes de subir a GitHub
+
+const SUPABASE_URL = 'https://bdfooiaolmixzinqmjar.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkZm9vaWFvbG1peHppbnFtamFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDIxODcsImV4cCI6MjA5Mjk3ODE4N30.Zat7q-3j4dsYBqpFfGFdJO0i-F9NYDa1Sksp74uumYQ';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── LOGIN ─────────────────────────────────────────────────────────────
+function adminLogin() {
+  const pass = document.getElementById('admin-pass').value;
+  const err = document.getElementById('login-error');
+  if (pass === ADMIN_PASSWORD) {
+    sessionStorage.setItem('lp_admin_auth', '1');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    cargarLicencias();
+  } else {
+    err.textContent = 'Contraseña incorrecta';
+    document.getElementById('admin-pass').value = '';
+  }
+}
+function adminLogout() {
+  sessionStorage.removeItem('lp_admin_auth');
+  location.reload();
+}
+
+document.getElementById('admin-pass').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') adminLogin();
+});
+
+if (sessionStorage.getItem('lp_admin_auth') === '1') {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  cargarLicencias();
+}
+
+// ── ALERTAS ───────────────────────────────────────────────────────────
+function showAlert(type, msg) {
+  const el = document.getElementById('alert-' + type);
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// ── GENERAR CLAVE ─────────────────────────────────────────────────────
+function generarClave() {
+  // Format: LP-XXXX-XXXX-XXXX (4 grupos de 4 caracteres alfanuméricos)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin O,0,I,1 para evitar confusión
+  let parts = [];
+  for (let i = 0; i < 3; i++) {
+    let s = '';
+    for (let j = 0; j < 4; j++) s += chars[Math.floor(Math.random() * chars.length)];
+    parts.push(s);
+  }
+  return 'LP-' + parts.join('-');
+}
+
+async function crearLicencia() {
+  const nombre = document.getElementById('new-name').value.trim();
+  const tel = document.getElementById('new-phone').value.trim();
+  const email = document.getElementById('new-email').value.trim();
+  const notas = document.getElementById('new-notes').value.trim();
+
+  if (!nombre) {
+    showAlert('error', 'El nombre del cliente es obligatorio');
+    return;
+  }
+
+  // Generar clave única (con un par de reintentos por si choca)
+  let clave;
+  for (let i = 0; i < 5; i++) {
+    clave = generarClave();
+    const { data: existing } = await sb.from('licencias').select('id').eq('clave', clave).maybeSingle();
+    if (!existing) break;
+  }
+
+  const { error } = await sb.from('licencias').insert({
+    clave,
+    cliente_nombre: nombre,
+    cliente_telefono: tel || null,
+    cliente_email: email || null,
+    notas: notas || null,
+    estado: 'pendiente'
+  });
+
+  if (error) {
+    showAlert('error', 'Error al crear: ' + error.message);
+    return;
+  }
+
+  // Limpiar formulario
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-phone').value = '';
+  document.getElementById('new-email').value = '';
+  document.getElementById('new-notes').value = '';
+
+  showAlert('success', '✓ Licencia creada para ' + nombre + ': ' + clave);
+  cargarLicencias();
+
+  // Auto-copiar al portapapeles
+  copyToClipboard(clave);
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showAlert('success', '✓ Copiado al portapapeles: ' + text);
+  }).catch(() => {});
+}
+
+// ── LISTAR LICENCIAS ──────────────────────────────────────────────────
+let _allLicencias = [];
+let _currentFilter = 'all';
+
+async function cargarLicencias() {
+  document.getElementById('list-container').innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px;">Cargando…</p>';
+  const { data, error } = await sb.from('licencias').select('*').order('fecha_creada', { ascending: false });
+  if (error) {
+    document.getElementById('list-container').innerHTML = '<p style="color:var(--red);padding:20px;">Error: ' + error.message + '</p>';
+    return;
+  }
+  _allLicencias = data || [];
+  // Update stats
+  const total = _allLicencias.length;
+  const pendientes = _allLicencias.filter(l => l.estado === 'pendiente').length;
+  const activas = _allLicencias.filter(l => l.estado === 'activa').length;
+  const revocadas = _allLicencias.filter(l => l.estado === 'revocada').length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-pendientes').textContent = pendientes;
+  document.getElementById('stat-activas').textContent = activas;
+  document.getElementById('stat-revocadas').textContent = revocadas;
+  renderLicencias();
+}
+
+function setFilter(f) {
+  _currentFilter = f;
+  // Update button styles
+  ['all','pendiente','activa','revocada'].forEach(x => {
+    const btn = document.getElementById('f-' + x);
+    btn.style.background = x === f ? 'var(--gold)' : 'var(--surface2)';
+    btn.style.color = x === f ? 'white' : 'var(--text)';
+  });
+  renderLicencias();
+}
+
+function renderLicencias() {
+  const search = (document.getElementById('search').value || '').toLowerCase();
+  let list = _allLicencias;
+  if (_currentFilter !== 'all') list = list.filter(l => l.estado === _currentFilter);
+  if (search) {
+    list = list.filter(l =>
+      (l.clave || '').toLowerCase().includes(search) ||
+      (l.cliente_nombre || '').toLowerCase().includes(search) ||
+      (l.cliente_telefono || '').toLowerCase().includes(search)
+    );
+  }
+
+  document.getElementById('list-count').textContent = list.length;
+  const container = document.getElementById('list-container');
+
+  if (!list.length) {
+    container.innerHTML = '<p style="text-align:center;color:var(--muted);padding:30px;font-size:13px;">No hay licencias para mostrar</p>';
+    return;
+  }
+
+  container.innerHTML = list.map(l => {
+    const fechaCreada = new Date(l.fecha_creada).toLocaleDateString('es-PA') + ' ' + new Date(l.fecha_creada).toLocaleTimeString('es-PA', {hour:'2-digit',minute:'2-digit'});
+    const fechaActivada = l.fecha_activada ? new Date(l.fecha_activada).toLocaleDateString('es-PA') : '—';
+    let actions = '';
+    if (l.estado === 'pendiente') {
+      actions = '<button class="btn btn-sm btn-secondary" onclick="copyToClipboard(\'' + l.clave + '\')">📋 Copiar clave</button>'
+              + '<button class="btn btn-sm btn-danger" onclick="revocarLicencia(' + l.id + ')">Revocar</button>'
+              + '<button class="btn btn-sm btn-danger" onclick="eliminarLicencia(' + l.id + ')">🗑️ Eliminar</button>';
+    } else if (l.estado === 'activa') {
+      actions = '<button class="btn btn-sm btn-secondary" onclick="liberarDispositivo(' + l.id + ')">🔓 Liberar dispositivo</button>'
+              + '<button class="btn btn-sm btn-danger" onclick="revocarLicencia(' + l.id + ')">Revocar</button>';
+    } else if (l.estado === 'revocada') {
+      actions = '<button class="btn btn-sm btn-success" onclick="reactivarLicencia(' + l.id + ')">Reactivar</button>'
+              + '<button class="btn btn-sm btn-danger" onclick="eliminarLicencia(' + l.id + ')">🗑️ Eliminar</button>';
+    }
+    return '<div class="lic-item">'
+      + '<div class="lic-header">'
+      +   '<div><div class="lic-clave">' + l.clave + '</div>'
+      +   '<div style="font-size:13px;color:var(--text);font-weight:600;margin-top:2px;">' + (l.cliente_nombre || '—') + '</div></div>'
+      +   '<span class="lic-status status-' + l.estado + '">' + l.estado + '</span>'
+      + '</div>'
+      + '<div class="lic-info">'
+      + (l.cliente_telefono ? '📞 <strong>' + l.cliente_telefono + '</strong>' : '')
+      + (l.cliente_email ? ' · ✉ ' + l.cliente_email : '')
+      + '<br>📅 Creada: ' + fechaCreada
+      + (l.fecha_activada ? '<br>✅ Activada: ' + fechaActivada : '')
+      + (l.device_id ? '<br>📱 Dispositivo: <code style="font-size:10px;background:var(--surface);padding:2px 6px;border-radius:4px;">' + l.device_id + '</code>' : '')
+      + (l.notas ? '<br>📝 ' + l.notas : '')
+      + '</div>'
+      + '<div class="lic-actions">' + actions + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+// ── ACCIONES ──────────────────────────────────────────────────────────
+async function revocarLicencia(id) {
+  if (!confirm('¿Revocar esta licencia? El cliente no podrá seguir usando la app.')) return;
+  const { error } = await sb.from('licencias').update({ estado: 'revocada' }).eq('id', id);
+  if (error) { showAlert('error', 'Error: ' + error.message); return; }
+  showAlert('success', 'Licencia revocada');
+  cargarLicencias();
+}
+
+async function reactivarLicencia(id) {
+  if (!confirm('¿Reactivar esta licencia?')) return;
+  // La reactivamos a "pendiente" para que el cliente pueda volver a activarla en su dispositivo
+  const { error } = await sb.from('licencias').update({ estado: 'pendiente', device_id: null, fecha_activada: null }).eq('id', id);
+  if (error) { showAlert('error', 'Error: ' + error.message); return; }
+  showAlert('success', 'Licencia reactivada (lista para activar)');
+  cargarLicencias();
+}
+
+async function liberarDispositivo(id) {
+  if (!confirm('¿Liberar el dispositivo de esta licencia? El cliente podrá activarla de nuevo en otro dispositivo.')) return;
+  const { error } = await sb.from('licencias').update({ estado: 'pendiente', device_id: null, fecha_activada: null }).eq('id', id);
+  if (error) { showAlert('error', 'Error: ' + error.message); return; }
+  showAlert('success', 'Dispositivo liberado. La licencia ahora está pendiente.');
+  cargarLicencias();
+}
+
+async function eliminarLicencia(id) {
+  if (!confirm('¿ELIMINAR esta licencia permanentemente? Esta acción no se puede deshacer.')) return;
+  // Nota: por seguridad RLS no permite DELETE. Usamos 'revocada' como soft-delete visual.
+  // Para borrar de verdad necesitarías hacerlo manualmente desde el dashboard de Supabase.
+  showAlert('error', 'Para eliminar permanentemente, hazlo desde el dashboard de Supabase. Por seguridad, aquí solo se puede revocar.');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lotería Pro · Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#fbf9f4;
+    --surface:#ffffff;
+    --surface2:#f5f2ea;
+    --text:#1a1a2a;
+    --muted:#6a6a82;
+    --gold:#b8860b;
+    --gold-soft:rgba(184,134,11,0.08);
+    --border:#e5e1d6;
+    --green:#2d9a3a;
+    --green-soft:rgba(45,154,58,0.08);
+    --red:#c43c3c;
+    --red-soft:rgba(196,60,60,0.08);
+    --blue:#3a7bd5;
+    --blue-soft:rgba(58,123,213,0.08);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  body{min-height:100vh;}
+
+  .container{max-width:900px;margin:0 auto;padding:20px 16px 40px;}
+
+  /* HEADER */
+  .header{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .header h1{font-family:'DM Serif Display',serif;font-size:22px;color:var(--gold);margin:0;font-weight:400;}
+  .header .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .btn{padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;transition:transform 0.1s, box-shadow 0.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.06);}
+  .btn:active{transform:translateY(0);}
+  .btn-gold{background:var(--gold);color:#fff;border-color:var(--gold);}
+  .btn-gold:hover{background:#9d7209;}
+  .btn-outline{background:transparent;}
+  .btn-danger{color:var(--red);border-color:rgba(196,60,60,0.3);}
+  .btn-danger:hover{background:var(--red-soft);}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+
+  /* STATS */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;}
+  .stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+  .stat-value{font-family:'DM Serif Display',serif;font-size:24px;color:var(--gold);}
+  @media(max-width:640px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+  }
+
+  /* VENDEDOR CARD */
+  .vendedor-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;}
+  .vendedor-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;}
+  .vendedor-info{flex:1;min-width:0;}
+  .vendedor-nombre{font-family:'DM Serif Display',serif;font-size:18px;color:var(--text);}
+  .vendedor-meta{font-size:12px;color:var(--muted);margin-top:3px;display:flex;flex-wrap:wrap;gap:10px;}
+  .badge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600;letter-spacing:0.3px;text-transform:uppercase;}
+  .badge-online{background:var(--green-soft);color:var(--green);border:1px solid rgba(45,154,58,0.25);}
+  .badge-offline{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+  .badge-blocked{background:var(--red-soft);color:var(--red);border:1px solid rgba(196,60,60,0.25);}
+  .vendedor-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;}
+  .vendedor-actions .btn{font-size:12px;padding:8px;}
+
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;align-items:center;justify-content:center;z-index:1000;padding:14px;backdrop-filter:blur(3px);}
+  .modal-overlay.open{display:flex;}
+  .modal-content{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,0.18);}
+  .modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:18px;}
+  .modal-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--gold);}
+  .modal-close{background:transparent;border:none;font-size:24px;color:var(--muted);cursor:pointer;padding:0;line-height:1;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;}
+  .modal-close:hover{background:var(--surface2);}
+
+  /* FORM */
+  .field{margin-bottom:14px;}
+  .field-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:block;font-weight:600;}
+  .input,.textarea{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;outline:none;transition:border 0.15s;}
+  .input:focus,.textarea:focus{border-color:var(--gold);}
+  .textarea{resize:vertical;min-height:60px;}
+  .field-hint{font-size:11px;color:var(--muted);margin-top:4px;}
+
+  /* LOGIN */
+  .login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:2000;}
+  .login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:30px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.08);}
+  .login-card h1{font-family:'DM Serif Display',serif;color:var(--gold);font-size:26px;margin:0 0 6px 0;text-align:center;}
+  .login-card .sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:22px;}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;z-index:3000;box-shadow:0 8px 24px rgba(0,0,0,0.2);transition:transform 0.25s ease;max-width:90vw;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  .toast.error{background:var(--red);}
+  .toast.success{background:var(--green);}
+
+  /* EMPTY STATE */
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;background:var(--surface);border:1px dashed var(--border);border-radius:12px;}
+  .empty-icon{font-size:36px;margin-bottom:10px;}
+
+  /* COPY BLOCK (when creating vendedor) */
+  .copy-block{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:14px;}
+  .copy-block-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);}
+  .copy-block-row:last-child{border-bottom:none;}
+  .copy-block-label{color:var(--muted);font-size:11px;}
+  .copy-block-value{font-family:'DM Mono',monospace;font-weight:600;font-size:13px;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ LOGIN SCREEN ═══════════════════ -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <h1>Lotería Pro</h1>
+    <div class="sub" id="login-sub">Panel de administración</div>
+    <div id="login-form"></div>
+    <button class="btn btn-gold" id="login-btn" onclick="doLogin()" style="width:100%;margin-top:14px;">Entrar</button>
+    <div id="login-error" style="color:var(--red);font-size:12px;text-align:center;margin-top:10px;display:none;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MAIN APP ═══════════════════ -->
+<div class="container" id="main-app" style="display:none;">
+
+  <div class="header">
+    <div>
+      <h1>Lotería Pro · Admin</h1>
+      <div class="sub">Gestión de vendedores</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" onclick="window.location.href='central.html'" title="Centro de control">📊 Central</button>
+      <button class="btn btn-outline" onclick="logout()" title="Cerrar sesión">🚪 Salir</button>
+    </div>
+  </div>
+
+  <div class="stats" id="stats">
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="stat-total">0</div></div>
+    <div class="stat-card"><div class="stat-label">Conectados</div><div class="stat-value" id="stat-online" style="color:var(--green);">0</div></div>
+    <div class="stat-card"><div class="stat-label">Activos</div><div class="stat-value" id="stat-activos">0</div></div>
+    <div class="stat-card"><div class="stat-label">Bloqueados</div><div class="stat-value" id="stat-bloqueados" style="color:var(--red);">0</div></div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap;">
+    <div style="font-size:13px;color:var(--muted);">Vendedores</div>
+    <button class="btn btn-gold" onclick="openCreateModal()">＋ Crear vendedor</button>
+  </div>
+
+  <div id="vendedor-list">
+    <div class="empty"><div class="empty-icon">⏳</div>Cargando vendedores…</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MODAL: CREAR / EDITAR VENDEDOR ═══════════════════ -->
+<div id="vendedor-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title" id="vendedor-modal-title">Crear vendedor</div>
+      <button class="modal-close" onclick="closeVendedorModal()">×</button>
+    </div>
+    <div class="field">
+      <label class="field-label">Nombre completo</label>
+      <input type="text" class="input" id="v-nombre" placeholder="Ej: Enrique Pérez">
+    </div>
+    <div class="field">
+      <label class="field-label">Usuario (sin espacios)</label>
+      <input type="text" class="input" id="v-usuario" placeholder="Ej: enrique" autocomplete="off">
+      <div class="field-hint">Lo que el vendedor escribirá para iniciar sesión. Solo letras/números, en minúsculas.</div>
+    </div>
+    <div class="field" id="v-password-field">
+      <label class="field-label">Contraseña</label>
+      <input type="text" class="input" id="v-password" placeholder="Ej: enrique123" autocomplete="off">
+      <div class="field-hint">Mínimo 4 caracteres. El vendedor podrá cambiarla después.</div>
+    </div>
+    <div class="field">
+      <label class="field-label">Teléfono (opcional)</label>
+      <input type="tel" class="input" id="v-telefono" placeholder="6XXX-XXXX">
+    </div>
+    <div class="field">
+      <label class="field-label">Notas (opcional)</label>
+      <textarea class="textarea" id="v-notas" placeholder="Sucursal, dirección, etc."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" onclick="closeVendedorModal()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveVendedor()" style="flex:1;" id="v-save-btn">Guardar</button>
+    </div>
+    <div id="v-result" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MODAL: CAMBIAR CONTRASEÑA ═══════════════════ -->
+<div id="password-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width:360px;">
+    <div class="modal-header">
+      <div class="modal-title">Cambiar contraseña</div>
+      <button class="modal-close" onclick="closePasswordModal()">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;" id="password-modal-sub"></div>
+    <div class="field">
+      <label class="field-label">Nueva contraseña</label>
+      <input type="text" class="input" id="new-password" placeholder="Mínimo 4 caracteres" autocomplete="off">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" onclick="closePasswordModal()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-gold" onclick="savePassword()" style="flex:1;">Cambiar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MODAL: CONFIRMAR ELIMINACIÓN ═══════════════════ -->
+<div id="delete-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--red);">⚠️ Eliminar vendedor</div>
+      <button class="modal-close" onclick="closeDeleteModal()">×</button>
+    </div>
+    <div style="font-size:13px;line-height:1.5;margin-bottom:14px;">
+      Vas a eliminar a <strong id="del-nombre"></strong> y <strong style="color:var(--red);">todos sus sorteos y facturas</strong>. Esta acción NO se puede deshacer.
+    </div>
+    <div class="field">
+      <label class="field-label">Para confirmar, escribe el usuario: <span id="del-usuario-hint" style="color:var(--text);font-family:'DM Mono',monospace;"></span></label>
+      <input type="text" class="input" id="del-confirm" placeholder="usuario" autocomplete="off">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" onclick="closeDeleteModal()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmDelete()" style="flex:1;">Eliminar definitivamente</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// CONFIG SUPABASE
+// ════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://bdfooiaolmixzinqmjar.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkZm9vaWFvbG1peHppbnFtamFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDIxODcsImV4cCI6MjA5Mjk3ODE4N30.Zat7q-3j4dsYBqpFfGFdJO0i-F9NYDa1Sksp74uumYQ';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ════════════════════════════════════════════════════════
+// UTILIDADES
+// ════════════════════════════════════════════════════════
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// Hash SHA-256 con Web Crypto API (browser nativo)
+async function sha256(text) {
+  const data = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+// Genera token de sesión aleatorio
+function genToken() {
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// LOGIN: detección + setup + verificación
+// ════════════════════════════════════════════════════════
+let _loginMode = 'login'; // 'setup' la primera vez (no hay password configurado)
+
+async function checkAuthOnLoad() {
+  // ¿Ya hay sesión local guardada?
+  const localToken = localStorage.getItem('lp_admin_token');
+  if (localToken) {
+    // Verificar que el hash actual de Supabase aún coincide con nuestro token guardado
+    try {
+      const { data, error } = await sb.from('config_central').select('password_hash').eq('id', 1).maybeSingle();
+      if (!error && data && data.password_hash === localToken) {
+        showApp();
+        return;
+      }
+    } catch (e) { console.warn(e); }
+    localStorage.removeItem('lp_admin_token');
+  }
+  // Decidir si es primer setup o login normal
+  try {
+    const { data, error } = await sb.from('config_central').select('password_hash').eq('id', 1).maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      _loginMode = 'setup';
+      renderSetupForm();
+    } else {
+      _loginMode = 'login';
+      renderLoginForm();
+    }
+  } catch (e) {
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('login-error').textContent = 'Error de conexión. Verifica internet y recarga.';
+  }
+}
+
+function renderLoginForm() {
+  document.getElementById('login-sub').textContent = 'Panel de administración';
+  document.getElementById('login-form').innerHTML =
+    '<div class="field"><label class="field-label">Contraseña</label>'
+    + '<input type="password" class="input" id="login-password" autocomplete="current-password" autofocus></div>';
+  document.getElementById('login-btn').textContent = 'Entrar';
+  // Enter to submit
+  setTimeout(() => {
+    const inp = document.getElementById('login-password');
+    if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  }, 50);
+}
+function renderSetupForm() {
+  document.getElementById('login-sub').innerHTML = '<strong style="color:var(--gold);">Primera vez aquí</strong><br>Crea la contraseña maestra (la usarás también para el centro de control)';
+  document.getElementById('login-form').innerHTML =
+    '<div class="field"><label class="field-label">Contraseña nueva</label>'
+    + '<input type="password" class="input" id="login-password" autocomplete="new-password" autofocus></div>'
+    + '<div class="field"><label class="field-label">Confirmar contraseña</label>'
+    + '<input type="password" class="input" id="login-password2" autocomplete="new-password"></div>';
+  document.getElementById('login-btn').textContent = 'Crear y entrar';
+  setTimeout(() => {
+    ['login-password','login-password2'].forEach(id => {
+      const inp = document.getElementById(id);
+      if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+    });
+  }, 50);
+}
+
+async function doLogin() {
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  const oldText = btn.textContent;
+  btn.textContent = 'Procesando…';
+  try {
+    const pwd = document.getElementById('login-password').value.trim();
+    if (pwd.length < 4) {
+      errEl.textContent = 'La contraseña debe tener al menos 4 caracteres';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (_loginMode === 'setup') {
+      const pwd2 = document.getElementById('login-password2').value.trim();
+      if (pwd !== pwd2) {
+        errEl.textContent = 'Las contraseñas no coinciden';
+        errEl.style.display = 'block';
+        return;
+      }
+      const hash = await sha256(pwd);
+      const { error } = await sb.from('config_central').insert([{ id: 1, password_hash: hash }]);
+      if (error) throw error;
+      localStorage.setItem('lp_admin_token', hash);
+      showApp();
+    } else {
+      const hash = await sha256(pwd);
+      const { data, error } = await sb.from('config_central').select('password_hash').eq('id', 1).maybeSingle();
+      if (error) throw error;
+      if (!data || data.password_hash !== hash) {
+        errEl.textContent = 'Contraseña incorrecta';
+        errEl.style.display = 'block';
+        return;
+      }
+      localStorage.setItem('lp_admin_token', hash);
+      showApp();
+    }
+  } catch (e) {
+    console.error(e);
+    errEl.textContent = 'Error: ' + (e.message || 'inténtalo de nuevo');
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
+function logout() {
+  localStorage.removeItem('lp_admin_token');
+  location.reload();
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  loadVendedores();
+}
+
+// ════════════════════════════════════════════════════════
+// LISTADO DE VENDEDORES
+// ════════════════════════════════════════════════════════
+let _vendedores = [];
+const ONLINE_THRESHOLD_MS = 2 * 60 * 1000; // si tuvo actividad en los últimos 2 min, consideramos "conectado"
+
+async function loadVendedores() {
+  const list = document.getElementById('vendedor-list');
+  list.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div>Cargando…</div>';
+  try {
+    const { data, error } = await sb.from('vendedores').select('*').order('fecha_creado', { ascending: true });
+    if (error) throw error;
+    _vendedores = data || [];
+    renderVendedores();
+    renderStats();
+  } catch (e) {
+    console.error(e);
+    list.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>Error al cargar: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function isOnline(v) {
+  if (!v.session_token || !v.ultima_actividad || !v.activo) return false;
+  const t = new Date(v.ultima_actividad).getTime();
+  return (Date.now() - t) < ONLINE_THRESHOLD_MS;
+}
+
+function renderStats() {
+  const total = _vendedores.length;
+  const online = _vendedores.filter(isOnline).length;
+  const activos = _vendedores.filter(v => v.activo).length;
+  const bloqueados = _vendedores.filter(v => !v.activo).length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-online').textContent = online;
+  document.getElementById('stat-activos').textContent = activos;
+  document.getElementById('stat-bloqueados').textContent = bloqueados;
+}
+
+function renderVendedores() {
+  const list = document.getElementById('vendedor-list');
+  if (!_vendedores.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">👥</div>Aún no hay vendedores. Toca <strong>＋ Crear vendedor</strong> para empezar.</div>';
+    return;
+  }
+  list.innerHTML = _vendedores.map(v => {
+    const online = isOnline(v);
+    let badge;
+    if (!v.activo) badge = '<span class="badge badge-blocked">🚫 Bloqueado</span>';
+    else if (online) badge = '<span class="badge badge-online">🟢 Conectado</span>';
+    else badge = '<span class="badge badge-offline">⚪ Desconectado</span>';
+
+    let lastSeen = '';
+    if (v.ultima_actividad) {
+      const t = new Date(v.ultima_actividad);
+      const diffMin = Math.floor((Date.now() - t.getTime()) / 60000);
+      if (online) lastSeen = 'Activo ahora';
+      else if (diffMin < 60) lastSeen = 'Hace ' + diffMin + ' min';
+      else if (diffMin < 60 * 24) lastSeen = 'Hace ' + Math.floor(diffMin / 60) + ' h';
+      else lastSeen = 'Hace ' + Math.floor(diffMin / (60 * 24)) + ' d';
+    } else {
+      lastSeen = 'Nunca conectado';
+    }
+
+    return '<div class="vendedor-card">'
+      + '<div class="vendedor-head">'
+      +   '<div class="vendedor-info">'
+      +     '<div class="vendedor-nombre">' + escapeHtml(v.nombre) + '</div>'
+      +     '<div class="vendedor-meta">'
+      +       '<span>👤 ' + escapeHtml(v.usuario) + '</span>'
+      +       (v.telefono ? '<span>📞 ' + escapeHtml(v.telefono) + '</span>' : '')
+      +       '<span>🕐 ' + escapeHtml(lastSeen) + '</span>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div>' + badge + '</div>'
+      + '</div>'
+      + '<div class="vendedor-actions">'
+      +   '<button class="btn btn-outline" onclick="openEditModal(' + v.id + ')">✏️ Editar</button>'
+      +   '<button class="btn btn-outline" onclick="openPasswordModal(' + v.id + ')">🔑 Contraseña</button>'
+      +   (v.session_token ? '<button class="btn btn-outline" onclick="kickVendedor(' + v.id + ')">🚪 Cerrar sesión</button>' : '')
+      +   (v.activo
+            ? '<button class="btn btn-outline" onclick="toggleBlock(' + v.id + ', false)">🚫 Bloquear</button>'
+            : '<button class="btn btn-outline" onclick="toggleBlock(' + v.id + ', true)" style="color:var(--green);">✓ Desbloquear</button>')
+      +   '<button class="btn btn-danger" onclick="openDeleteModal(' + v.id + ')">🗑️ Eliminar</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+// Refresh every 30 seconds while user is here
+setInterval(() => {
+  if (document.getElementById('main-app').style.display !== 'none') {
+    loadVendedores();
+  }
+}, 30000);
+
+// ════════════════════════════════════════════════════════
+// CREAR / EDITAR VENDEDOR
+// ════════════════════════════════════════════════════════
+let _editingVendedorId = null;
+
+function openCreateModal() {
+  _editingVendedorId = null;
+  document.getElementById('vendedor-modal-title').textContent = 'Crear vendedor';
+  document.getElementById('v-nombre').value = '';
+  document.getElementById('v-usuario').value = '';
+  document.getElementById('v-usuario').readOnly = false;
+  document.getElementById('v-password').value = '';
+  document.getElementById('v-telefono').value = '';
+  document.getElementById('v-notas').value = '';
+  document.getElementById('v-password-field').style.display = 'block';
+  document.getElementById('v-result').style.display = 'none';
+  document.getElementById('v-save-btn').textContent = 'Crear';
+  document.getElementById('vendedor-modal').classList.add('open');
+  setTimeout(() => document.getElementById('v-nombre').focus(), 50);
+}
+
+function openEditModal(id) {
+  const v = _vendedores.find(x => x.id === id);
+  if (!v) return;
+  _editingVendedorId = id;
+  document.getElementById('vendedor-modal-title').textContent = 'Editar vendedor';
+  document.getElementById('v-nombre').value = v.nombre || '';
+  document.getElementById('v-usuario').value = v.usuario || '';
+  document.getElementById('v-usuario').readOnly = true; // no permitir cambiar usuario después
+  document.getElementById('v-telefono').value = v.telefono || '';
+  document.getElementById('v-notas').value = v.notas || '';
+  document.getElementById('v-password-field').style.display = 'none'; // contraseña se cambia aparte
+  document.getElementById('v-result').style.display = 'none';
+  document.getElementById('v-save-btn').textContent = 'Guardar cambios';
+  document.getElementById('vendedor-modal').classList.add('open');
+}
+
+function closeVendedorModal() {
+  document.getElementById('vendedor-modal').classList.remove('open');
+  _editingVendedorId = null;
+}
+
+async function saveVendedor() {
+  const btn = document.getElementById('v-save-btn');
+  const nombre = document.getElementById('v-nombre').value.trim();
+  const usuario = document.getElementById('v-usuario').value.trim().toLowerCase();
+  const password = document.getElementById('v-password').value.trim();
+  const telefono = document.getElementById('v-telefono').value.trim();
+  const notas = document.getElementById('v-notas').value.trim();
+
+  if (!nombre) return showToast('Ingresa el nombre', 'error');
+  if (!usuario || !/^[a-z0-9_]+$/.test(usuario)) return showToast('Usuario inválido (solo minúsculas, números y _)', 'error');
+
+  btn.disabled = true;
+  const oldText = btn.textContent;
+  btn.textContent = 'Guardando…';
+  try {
+    if (_editingVendedorId === null) {
+      // CREAR
+      if (password.length < 4) {
+        showToast('Contraseña mínimo 4 caracteres', 'error');
+        return;
+      }
+      const hash = await sha256(password);
+      const { data, error } = await sb.from('vendedores').insert([{
+        nombre, usuario, password_hash: hash,
+        telefono: telefono || null,
+        notas: notas || null,
+        activo: true
+      }]).select().maybeSingle();
+      if (error) {
+        if (error.code === '23505') throw new Error('Ese usuario ya existe');
+        throw error;
+      }
+      // Mostrar resumen con credenciales
+      const result = document.getElementById('v-result');
+      result.style.display = 'block';
+      result.innerHTML = '<div class="copy-block">'
+        + '<div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:8px;">✓ Vendedor creado. Comparte estas credenciales:</div>'
+        + '<div class="copy-block-row"><span class="copy-block-label">Usuario</span><span class="copy-block-value">' + escapeHtml(usuario) + '</span></div>'
+        + '<div class="copy-block-row"><span class="copy-block-label">Contraseña</span><span class="copy-block-value">' + escapeHtml(password) + '</span></div>'
+        + '<button class="btn btn-outline" style="width:100%;margin-top:10px;font-size:12px;" onclick="copyCredentials(\'' + escapeHtml(usuario) + '\',\'' + escapeHtml(password).replace(/'/g,"\\'") + '\')">📋 Copiar</button>'
+        + '</div>';
+      // Auto-close after 6s? No, dejamos que el dueño lo cierre cuando guarde las creds
+      showToast('✓ Vendedor creado');
+      loadVendedores();
+    } else {
+      // EDITAR
+      const { error } = await sb.from('vendedores').update({
+        nombre,
+        telefono: telefono || null,
+        notas: notas || null
+      }).eq('id', _editingVendedorId);
+      if (error) throw error;
+      showToast('✓ Cambios guardados');
+      closeVendedorModal();
+      loadVendedores();
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('Error: ' + (e.message || 'desconocido'), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
+function copyCredentials(usuario, password) {
+  const text = 'Lotería Pro\nUsuario: ' + usuario + '\nContraseña: ' + password;
+  navigator.clipboard.writeText(text).then(() => showToast('✓ Copiado al portapapeles'))
+    .catch(() => showToast('No se pudo copiar', 'error'));
+}
+
+// ════════════════════════════════════════════════════════
+// CAMBIAR CONTRASEÑA
+// ════════════════════════════════════════════════════════
+let _passwordVendedorId = null;
+function openPasswordModal(id) {
+  const v = _vendedores.find(x => x.id === id);
+  if (!v) return;
+  _passwordVendedorId = id;
+  document.getElementById('password-modal-sub').innerHTML = 'Vendedor: <strong>' + escapeHtml(v.nombre) + '</strong> (' + escapeHtml(v.usuario) + ')';
+  document.getElementById('new-password').value = '';
+  document.getElementById('password-modal').classList.add('open');
+  setTimeout(() => document.getElementById('new-password').focus(), 50);
+}
+function closePasswordModal() {
+  document.getElementById('password-modal').classList.remove('open');
+  _passwordVendedorId = null;
+}
+async function savePassword() {
+  if (_passwordVendedorId === null) return;
+  const newPwd = document.getElementById('new-password').value.trim();
+  if (newPwd.length < 4) return showToast('Mínimo 4 caracteres', 'error');
+  try {
+    const hash = await sha256(newPwd);
+    // También limpiar el session_token para forzar relogin con nueva contraseña
+    const { error } = await sb.from('vendedores').update({
+      password_hash: hash,
+      session_token: null
+    }).eq('id', _passwordVendedorId);
+    if (error) throw error;
+    showToast('✓ Contraseña cambiada (cierra sesión del vendedor)');
+    closePasswordModal();
+    loadVendedores();
+  } catch (e) {
+    console.error(e);
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// CERRAR SESIÓN REMOTA (KICK)
+// ════════════════════════════════════════════════════════
+async function kickVendedor(id) {
+  const v = _vendedores.find(x => x.id === id);
+  if (!v) return;
+  if (!confirm('¿Cerrar la sesión de ' + v.nombre + '? Tendrá que iniciar sesión de nuevo.')) return;
+  try {
+    const { error } = await sb.from('vendedores').update({ session_token: null }).eq('id', id);
+    if (error) throw error;
+    showToast('✓ Sesión cerrada');
+    loadVendedores();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// BLOQUEAR / DESBLOQUEAR
+// ════════════════════════════════════════════════════════
+async function toggleBlock(id, activo) {
+  const v = _vendedores.find(x => x.id === id);
+  if (!v) return;
+  const action = activo ? 'desbloquear' : 'bloquear';
+  if (!confirm('¿' + (activo ? 'Desbloquear' : 'Bloquear') + ' a ' + v.nombre + '?' + (!activo ? ' No podrá iniciar sesión hasta que lo desbloquees.' : ''))) return;
+  try {
+    const update = { activo };
+    if (!activo) update.session_token = null; // al bloquear, también se cierra su sesión
+    const { error } = await sb.from('vendedores').update(update).eq('id', id);
+    if (error) throw error;
+    showToast('✓ Vendedor ' + (activo ? 'desbloqueado' : 'bloqueado'));
+    loadVendedores();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// ELIMINAR VENDEDOR
+// ════════════════════════════════════════════════════════
+let _deleteVendedorId = null;
+function openDeleteModal(id) {
+  const v = _vendedores.find(x => x.id === id);
+  if (!v) return;
+  _deleteVendedorId = id;
+  document.getElementById('del-nombre').textContent = v.nombre;
+  document.getElementById('del-usuario-hint').textContent = v.usuario;
+  document.getElementById('del-confirm').value = '';
+  document.getElementById('delete-modal').classList.add('open');
+}
+function closeDeleteModal() {
+  document.getElementById('delete-modal').classList.remove('open');
+  _deleteVendedorId = null;
+}
+async function confirmDelete() {
+  if (_deleteVendedorId === null) return;
+  const v = _vendedores.find(x => x.id === _deleteVendedorId);
+  if (!v) return;
+  const typed = document.getElementById('del-confirm').value.trim().toLowerCase();
+  if (typed !== v.usuario.toLowerCase()) return showToast('El usuario no coincide', 'error');
+  try {
+    const { error } = await sb.from('vendedores').delete().eq('id', _deleteVendedorId);
+    if (error) throw error;
+    showToast('✓ Vendedor eliminado');
+    closeDeleteModal();
+    loadVendedores();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+checkAuthOnLoad();
+</script>
+
+</body>
+</html>

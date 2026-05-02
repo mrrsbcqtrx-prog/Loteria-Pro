@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lotería Pro · Centro de Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#fbf9f4;
+    --surface:#ffffff;
+    --surface2:#f5f2ea;
+    --text:#1a1a2a;
+    --muted:#6a6a82;
+    --gold:#b8860b;
+    --gold-soft:rgba(184,134,11,0.08);
+    --border:#e5e1d6;
+    --green:#2d9a3a;
+    --green-soft:rgba(45,154,58,0.08);
+    --red:#c43c3c;
+    --red-soft:rgba(196,60,60,0.08);
+    --blue:#3a7bd5;
+    --blue-soft:rgba(58,123,213,0.08);
+    --purple:#7a4ec4;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  body{min-height:100vh;}
+
+  .container{max-width:1200px;margin:0 auto;padding:20px 16px 40px;}
+
+  /* HEADER */
+  .header{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .header h1{font-family:'DM Serif Display',serif;font-size:24px;color:var(--gold);margin:0;font-weight:400;}
+  .header .sub{font-size:12px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:8px;}
+  .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+  .btn{padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;transition:transform 0.1s, box-shadow 0.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.06);}
+  .btn:active{transform:translateY(0);}
+  .btn-gold{background:var(--gold);color:#fff;border-color:var(--gold);}
+  .btn-gold:hover{background:#9d7209;}
+  .btn-outline{background:transparent;}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+
+  /* TOP STATS */
+  .top-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;}
+  .stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;font-weight:600;}
+  .stat-value{font-family:'DM Serif Display',serif;font-size:28px;color:var(--gold);line-height:1;}
+  .stat-extra{font-size:11px;color:var(--muted);margin-top:6px;}
+  @media(max-width:760px){
+    .top-stats{grid-template-columns:repeat(2,1fr);}
+  }
+
+  /* TWO-COL LAYOUT */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+  @media(max-width:900px){
+    .two-col{grid-template-columns:1fr;}
+  }
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;}
+  .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
+  .panel-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--text);}
+  .panel-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+  /* PERIOD TABS */
+  .period-tabs{display:flex;gap:4px;background:var(--surface2);padding:3px;border-radius:8px;}
+  .period-tabs button{background:transparent;border:none;padding:6px 12px;font-size:11px;color:var(--muted);cursor:pointer;border-radius:6px;font-family:inherit;font-weight:600;letter-spacing:0.3px;}
+  .period-tabs button.active{background:var(--surface);color:var(--gold);box-shadow:0 1px 2px rgba(0,0,0,0.05);}
+
+  /* VENDEDOR ROW */
+  .vendedor-row{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;transition:transform 0.1s, box-shadow 0.15s;}
+  .vendedor-row:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,0.06);}
+  .vendedor-row.active{border-color:var(--green);background:var(--green-soft);}
+  .vendedor-row.blocked{opacity:0.55;}
+  .vrow-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .vrow-name{font-family:'DM Serif Display',serif;font-size:16px;color:var(--text);}
+  .vrow-meta{font-size:11px;color:var(--muted);margin-top:2px;display:flex;flex-wrap:wrap;gap:8px;}
+  .vrow-amount{font-family:'DM Mono',monospace;font-weight:700;font-size:18px;color:var(--gold);text-align:right;}
+  .vrow-amount-sub{font-size:10px;color:var(--muted);text-align:right;margin-top:1px;}
+  .badge{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;letter-spacing:0.3px;text-transform:uppercase;}
+  .badge-online{background:var(--green-soft);color:var(--green);border:1px solid rgba(45,154,58,0.25);}
+  .badge-offline{background:var(--surface);color:var(--muted);border:1px solid var(--border);}
+  .badge-blocked{background:var(--red-soft);color:var(--red);border:1px solid rgba(196,60,60,0.25);}
+
+  /* RANKING */
+  .rank-row{display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;}
+  .rank-num{font-family:'DM Serif Display',serif;font-size:22px;color:var(--gold);width:32px;text-align:center;}
+  .rank-info{flex:1;min-width:0;}
+  .rank-name{font-weight:600;font-size:14px;}
+  .rank-sub{font-size:11px;color:var(--muted);}
+  .rank-amount{font-family:'DM Mono',monospace;font-weight:700;color:var(--green);}
+  .rank-medal-1{background:linear-gradient(135deg,#ffd700,#daa520);color:#fff !important;text-shadow:0 1px 2px rgba(0,0,0,0.2);}
+  .rank-medal-2{background:linear-gradient(135deg,#c0c0c0,#a0a0a0);color:#fff !important;text-shadow:0 1px 2px rgba(0,0,0,0.2);}
+  .rank-medal-3{background:linear-gradient(135deg,#cd7f32,#a0522d);color:#fff !important;text-shadow:0 1px 2px rgba(0,0,0,0.2);}
+
+  /* FEED */
+  .feed-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;}
+  .feed-row:last-child{border-bottom:none;}
+  .feed-row.new{animation:flash 1.5s ease-out;}
+  @keyframes flash{0%{background:rgba(45,154,58,0.18);}100%{background:transparent;}}
+  .feed-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);min-width:65px;}
+  .feed-vend{font-weight:600;color:var(--text);min-width:80px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .feed-fid{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+  .feed-amount{font-family:'DM Mono',monospace;font-weight:700;color:var(--gold);min-width:60px;text-align:right;}
+  .feed-paid-badge{font-size:9px;background:var(--green-soft);color:var(--green);padding:2px 5px;border-radius:4px;font-weight:700;}
+
+  /* SEARCH */
+  .search-row{display:flex;gap:6px;margin-bottom:10px;}
+  .search-input{flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;}
+  .search-input:focus{border-color:var(--gold);}
+
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;align-items:center;justify-content:center;z-index:1000;padding:14px;backdrop-filter:blur(3px);}
+  .modal-overlay.open{display:flex;}
+  .modal-content{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,0.18);}
+  .modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:18px;}
+  .modal-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--gold);}
+  .modal-close{background:transparent;border:none;font-size:24px;color:var(--muted);cursor:pointer;padding:0;line-height:1;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;}
+  .modal-close:hover{background:var(--surface2);}
+
+  /* TABS within modal */
+  .tabs{display:flex;gap:4px;background:var(--surface2);padding:3px;border-radius:8px;margin-bottom:14px;}
+  .tabs button{flex:1;background:transparent;border:none;padding:8px 12px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:6px;font-family:inherit;font-weight:600;}
+  .tabs button.active{background:var(--surface);color:var(--gold);box-shadow:0 1px 2px rgba(0,0,0,0.05);}
+
+  /* LOGIN */
+  .login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:2000;}
+  .login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:30px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.08);}
+  .login-card h1{font-family:'DM Serif Display',serif;color:var(--gold);font-size:28px;margin:0 0 6px 0;text-align:center;}
+  .login-card .sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:22px;}
+  .field{margin-bottom:14px;}
+  .field-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:block;font-weight:600;}
+  .input{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;outline:none;transition:border 0.15s;}
+  .input:focus{border-color:var(--gold);}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;z-index:3000;box-shadow:0 8px 24px rgba(0,0,0,0.2);transition:transform 0.25s ease;max-width:90vw;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  .toast.error{background:var(--red);}
+  .toast.success{background:var(--green);}
+
+  /* EMPTY */
+  .empty{text-align:center;padding:30px 20px;color:var(--muted);font-size:13px;}
+  .empty-icon{font-size:30px;margin-bottom:8px;}
+
+  /* DETAIL CARD */
+  .detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+  .detail-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;}
+  .detail-stat-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+  .detail-stat-value{font-family:'DM Serif Display',serif;font-size:20px;color:var(--gold);margin-top:2px;}
+  @media(max-width:480px){
+    .detail-grid{grid-template-columns:repeat(2,1fr);}
+  }
+
+  /* SORTEO/FACTURA ROW IN DETAIL */
+  .item-row{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;}
+  .item-row-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px;}
+  .item-row-title{font-weight:600;font-size:14px;}
+  .item-row-sub{font-size:11px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ LOGIN SCREEN ═══════════════════ -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <h1>Lotería Pro</h1>
+    <div class="sub">Centro de control</div>
+    <div class="field">
+      <label class="field-label">Contraseña</label>
+      <input type="password" class="input" id="login-password" autocomplete="current-password" autofocus>
+    </div>
+    <button class="btn btn-gold" id="login-btn" onclick="doLogin()" style="width:100%;">Entrar</button>
+    <div id="login-error" style="color:var(--red);font-size:12px;text-align:center;margin-top:10px;display:none;"></div>
+    <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:14px;">Usa la misma contraseña que admin</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MAIN APP ═══════════════════ -->
+<div class="container" id="main-app" style="display:none;">
+
+  <div class="header">
+    <div>
+      <h1>Centro de Control</h1>
+      <div class="sub"><span class="live-dot"></span> En vivo · <span id="last-update">cargando…</span></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" onclick="window.location.href='admin.html'" title="Gestión de vendedores">👥 Admin</button>
+      <button class="btn btn-outline" onclick="logout()">🚪 Salir</button>
+    </div>
+  </div>
+
+  <!-- ════════ TABS DE NAVEGACIÓN ════════ -->
+  <div style="display:flex;gap:6px;background:var(--surface);padding:6px;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);">
+    <button class="ctab-btn active" data-ctab="resumen" onclick="setCentralTab('resumen')" style="flex:1;background:var(--gold);color:#fff;border:none;padding:11px;border-radius:8px;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+      📊 Resumen
+    </button>
+    <button class="ctab-btn" data-ctab="analisis" onclick="setCentralTab('analisis')" style="flex:1;background:transparent;color:var(--text);border:none;padding:11px;border-radius:8px;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+      📈 Análisis
+    </button>
+    <button class="ctab-btn" data-ctab="historial" onclick="setCentralTab('historial')" style="flex:1;background:transparent;color:var(--text);border:none;padding:11px;border-radius:8px;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+      📅 Histórico
+    </button>
+  </div>
+
+  <!-- ════════ TAB: RESUMEN (vista original) ════════ -->
+  <div id="tab-resumen">
+
+  <!-- TOP STATS -->
+  <div class="top-stats">
+    <div class="stat-card">
+      <div class="stat-label">Recaudado</div>
+      <div class="stat-value" id="stat-recaudado">$0.00</div>
+      <div class="stat-extra" id="stat-recaudado-extra">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Facturas</div>
+      <div class="stat-value" id="stat-facturas">0</div>
+      <div class="stat-extra" id="stat-facturas-extra">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Vendedores activos</div>
+      <div class="stat-value" id="stat-activos" style="color:var(--green);">0</div>
+      <div class="stat-extra" id="stat-activos-extra">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Premios pendientes</div>
+      <div class="stat-value" id="stat-premios" style="color:var(--red);">$0.00</div>
+      <div class="stat-extra" id="stat-premios-extra">—</div>
+    </div>
+  </div>
+
+  <!-- VENDEDORES + RANKING -->
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Vendedores</div>
+          <div class="panel-sub">Estado en tiempo real · toca uno para ver detalle</div>
+        </div>
+        <div class="period-tabs">
+          <button class="active" onclick="setPeriod('today')" data-period="today">Hoy</button>
+          <button onclick="setPeriod('week')" data-period="week">Semana</button>
+          <button onclick="setPeriod('month')" data-period="month">Mes</button>
+          <button onclick="setPeriod('all')" data-period="all">Todo</button>
+        </div>
+      </div>
+      <div id="vendedor-list">
+        <div class="empty"><div class="empty-icon">⏳</div>Cargando…</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🏆 Ranking</div>
+          <div class="panel-sub">Top vendedores del período seleccionado</div>
+        </div>
+      </div>
+      <div id="ranking-list">
+        <div class="empty"><div class="empty-icon">⏳</div>Cargando…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEED + SEARCH -->
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">📜 Actividad en vivo</div>
+          <div class="panel-sub">Últimas 30 facturas de todos los vendedores</div>
+        </div>
+      </div>
+      <div id="feed-list" style="max-height:500px;overflow-y:auto;">
+        <div class="empty"><div class="empty-icon">⏳</div>Cargando…</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🔍 Buscar factura</div>
+          <div class="panel-sub">Por número de factura (F-001) o número jugado</div>
+        </div>
+      </div>
+      <div class="search-row">
+        <input type="text" class="search-input" id="search-input" placeholder="F-001, 25, 1234..." oninput="doSearch()">
+      </div>
+      <div id="search-results" style="max-height:440px;overflow-y:auto;">
+        <div class="empty">Escribe arriba para buscar</div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /tab-resumen -->
+
+  <!-- ════════ TAB: ANÁLISIS ════════ -->
+  <div id="tab-analisis" style="display:none;">
+
+    <!-- Selector global / por vendedor -->
+    <div class="panel" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div style="font-size:13px;color:var(--muted);font-weight:600;">Mostrar análisis de:</div>
+        <select id="analysis-vendedor-select" onchange="renderAnalysis()" style="flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;outline:none;">
+          <option value="all">🌍 Todos los vendedores (vista global)</option>
+        </select>
+        <div class="period-tabs">
+          <button class="active" onclick="setAnalysisPeriod('today')" data-aperiod="today">Hoy</button>
+          <button onclick="setAnalysisPeriod('week')" data-aperiod="week">Semana</button>
+          <button onclick="setAnalysisPeriod('month')" data-aperiod="month">Mes</button>
+          <button onclick="setAnalysisPeriod('all')" data-aperiod="all">Todo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resumen de números: total recaudado / facturas / promedio por factura -->
+    <div class="top-stats" id="analysis-top-stats"></div>
+
+    <!-- Gráfica: ventas por día -->
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">📈 Ventas por día</div>
+          <div class="panel-sub">Evolución del recaudado en el período</div>
+        </div>
+      </div>
+      <div style="position:relative;height:280px;">
+        <canvas id="chart-sales-by-day"></canvas>
+      </div>
+    </div>
+
+    <!-- Dos gráficas en columnas: Chance vs Billete + Horarios pico -->
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">🎯 Chance vs Billete</div>
+            <div class="panel-sub">Distribución de ventas por tipo</div>
+          </div>
+        </div>
+        <div style="position:relative;height:240px;">
+          <canvas id="chart-tipo"></canvas>
+        </div>
+        <div id="chart-tipo-legend" style="margin-top:14px;font-size:13px;"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">🕐 Horarios pico</div>
+            <div class="panel-sub">Ventas por hora del día (24h)</div>
+          </div>
+        </div>
+        <div style="position:relative;height:240px;">
+          <canvas id="chart-horas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparativa entre vendedores (solo modo "Todos") -->
+    <div class="panel" id="panel-comparativa" style="margin-top:16px;">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">👥 Comparativa entre vendedores</div>
+          <div class="panel-sub">Recaudado por vendedor en el período</div>
+        </div>
+      </div>
+      <div style="position:relative;height:280px;">
+        <canvas id="chart-vendedores"></canvas>
+      </div>
+    </div>
+
+  </div><!-- /tab-analisis -->
+
+  <!-- ════════ TAB: HISTÓRICO DE SORTEOS CERRADOS ════════ -->
+  <div id="tab-historial" style="display:none;">
+
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">📅 Histórico de sorteos cerrados</div>
+          <div class="panel-sub">Todos los sorteos cerrados de todos los vendedores</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="hist-vendedor-filter" onchange="renderHistorial()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-family:inherit;font-size:12px;outline:none;">
+            <option value="all">Todos los vendedores</option>
+          </select>
+        </div>
+      </div>
+      <div id="historial-list">
+        <div class="empty"><div class="empty-icon">⏳</div>Cargando…</div>
+      </div>
+    </div>
+
+  </div><!-- /tab-historial -->
+
+</div>
+
+<!-- MODAL: DETALLE DE VENDEDOR -->
+<div id="vendedor-detail-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width:680px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="vd-title">Vendedor</div>
+        <div class="panel-sub" id="vd-sub">—</div>
+      </div>
+      <button class="modal-close" onclick="closeVendedorDetail()">×</button>
+    </div>
+    <div class="detail-grid" id="vd-stats"></div>
+    <div class="tabs">
+      <button class="active" onclick="setDetailTab('sorteos')" id="vd-tab-sorteos">Sorteos</button>
+      <button onclick="setDetailTab('facturas')" id="vd-tab-facturas">Facturas</button>
+      <button onclick="setDetailTab('ganadores')" id="vd-tab-ganadores">Ganadores</button>
+    </div>
+    <div id="vd-content" style="max-height:50vh;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<!-- MODAL: DETALLE DE FACTURA -->
+<div id="factura-detail-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width:480px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="fd-title">Factura</div>
+        <div class="panel-sub" id="fd-sub">—</div>
+      </div>
+      <button class="modal-close" onclick="closeFacturaDetail()">×</button>
+    </div>
+    <div id="fd-content"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONFIG SUPABASE
+// ═══════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://bdfooiaolmixzinqmjar.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkZm9vaWFvbG1peHppbnFtamFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDIxODcsImV4cCI6MjA5Mjk3ODE4N30.Zat7q-3j4dsYBqpFfGFdJO0i-F9NYDa1Sksp74uumYQ';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+async function sha256(text) {
+  const data = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function fmt$(n){ return '$' + (Number(n)||0).toFixed(2); }
+function timeAgo(iso) {
+  if (!iso) return '—';
+  const t = new Date(iso).getTime();
+  const diffSec = Math.floor((Date.now() - t) / 1000);
+  if (diffSec < 5) return 'ahora';
+  if (diffSec < 60) return 'hace ' + diffSec + 's';
+  const m = Math.floor(diffSec / 60);
+  if (m < 60) return 'hace ' + m + 'm';
+  const h = Math.floor(m / 60);
+  if (h < 24) return 'hace ' + h + 'h';
+  return 'hace ' + Math.floor(h / 24) + 'd';
+}
+const ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
+function isOnline(v) {
+  if (!v.session_token || !v.ultima_actividad || !v.activo) return false;
+  return (Date.now() - new Date(v.ultima_actividad).getTime()) < ONLINE_THRESHOLD_MS;
+}
+
+// Period helpers
+function getPeriodStart(period) {
+  const now = new Date();
+  if (period === 'today') {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
+  }
+  if (period === 'week') {
+    const d = new Date(now); d.setDate(d.getDate() - 7); d.setHours(0,0,0,0);
+    return d.toISOString();
+  }
+  if (period === 'month') {
+    const d = new Date(now); d.setDate(d.getDate() - 30); d.setHours(0,0,0,0);
+    return d.toISOString();
+  }
+  return null; // all
+}
+
+// ═══════════════════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════════════════
+async function checkAuthOnLoad() {
+  const localToken = localStorage.getItem('lp_admin_token');
+  if (localToken) {
+    try {
+      const { data } = await sb.from('config_central').select('password_hash').eq('id', 1).maybeSingle();
+      if (data && data.password_hash === localToken) {
+        showApp();
+        return;
+      }
+    } catch (e) {}
+    localStorage.removeItem('lp_admin_token');
+  }
+  // Show login
+  setTimeout(() => {
+    const i = document.getElementById('login-password');
+    if (i) {
+      i.focus();
+      i.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+    }
+  }, 100);
+}
+
+async function doLogin() {
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.textContent = 'Verificando…';
+  try {
+    const pwd = document.getElementById('login-password').value.trim();
+    if (!pwd) { errEl.textContent='Ingresa la contraseña'; errEl.style.display='block'; return; }
+    const hash = await sha256(pwd);
+    const { data, error } = await sb.from('config_central').select('password_hash').eq('id', 1).maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      errEl.textContent = 'No hay contraseña configurada. Entra primero a admin.html';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (data.password_hash !== hash) {
+      errEl.textContent = 'Contraseña incorrecta';
+      errEl.style.display = 'block';
+      return;
+    }
+    localStorage.setItem('lp_admin_token', hash);
+    showApp();
+  } catch (e) {
+    errEl.textContent = 'Error: ' + (e.message || 'inténtalo de nuevo');
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+}
+
+function logout() {
+  localStorage.removeItem('lp_admin_token');
+  location.reload();
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  startApp();
+}
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let _state = {
+  vendedores: [],
+  sorteos: [],
+  facturas: [],
+  period: 'today',
+};
+
+// ═══════════════════════════════════════════════════════
+// DATA LOADING
+// ═══════════════════════════════════════════════════════
+async function loadAll() {
+  try {
+    const [vRes, sRes, fRes] = await Promise.all([
+      sb.from('vendedores').select('*').order('nombre', { ascending: true }),
+      sb.from('sorteos').select('*').order('fecha_creado', { ascending: false }),
+      sb.from('facturas').select('*').order('fecha', { ascending: false }).limit(500),
+    ]);
+    if (vRes.error) throw vRes.error;
+    if (sRes.error) throw sRes.error;
+    if (fRes.error) throw fRes.error;
+    _state.vendedores = vRes.data || [];
+    _state.sorteos = sRes.data || [];
+    _state.facturas = fRes.data || [];
+    renderAll();
+    document.getElementById('last-update').textContent = 'actualizado ' + new Date().toLocaleTimeString('es-PA', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  } catch (e) {
+    console.error('Load error:', e);
+    showToast('Error al cargar: ' + e.message, 'error');
+  }
+}
+
+function renderAll() {
+  // Siempre renderizamos todo para mantener consistencia (los tabs ocultos no consumen mucho)
+  renderTopStats();
+  renderVendedores();
+  renderRanking();
+  renderFeed();
+  // Pobla los <select> de vendedores en los tabs nuevos
+  populateAnalysisVendedorSelect();
+  populateHistorialVendedorFilter();
+  // Si el tab actual es Análisis o Histórico, refresca
+  if (_centralTab === 'analisis') renderAnalysis();
+  if (_centralTab === 'historial') renderHistorial();
+}
+
+// ═══════════════════════════════════════════════════════
+// TOP STATS
+// ═══════════════════════════════════════════════════════
+function renderTopStats() {
+  const periodStart = getPeriodStart(_state.period);
+  const factsInPeriod = _state.facturas.filter(f => !periodStart || f.fecha >= periodStart);
+
+  const recaudado = factsInPeriod.reduce((s,f) => s + (Number(f.total)||0), 0);
+  const numFacts = factsInPeriod.length;
+  const activos = _state.vendedores.filter(isOnline).length;
+  const totalVend = _state.vendedores.filter(v => v.activo).length;
+
+  // Premios pendientes = ganados pero no pagados (cálculo aproximado por factura.paid)
+  // Sólo facturas que tienen un sorteo cerrado con winners
+  const sorteosClosedById = {};
+  _state.sorteos.forEach(s => {
+    if (s.closed && s.winners) sorteosClosedById[s.id] = s;
+  });
+  let premiosPendientes = 0;
+  let premiosPagados = 0;
+  _state.facturas.forEach(f => {
+    const s = sorteosClosedById[f.sorteo_id];
+    if (!s) return;
+    const w = s.winners;
+    if (!w || !w.p1) return;
+    let total = 0;
+    (f.items || []).forEach(it => {
+      let p = 0;
+      if (it.type === 'billete') p = calcBilletePrize(it.number, w.p1, w.p2, w.p3);
+      else if (it.type === 'vil') p = calcVilPrize(it.number, w.p1, w.p2, w.p3);
+      if (p > 0) total += p * (it.qty||0);
+    });
+    if (total > 0) {
+      if (f.paid) premiosPagados += Number(f.paid_amount || total);
+      else premiosPendientes += total;
+    }
+  });
+
+  document.getElementById('stat-recaudado').textContent = fmt$(recaudado);
+  document.getElementById('stat-recaudado-extra').textContent = periodLabel(_state.period);
+  document.getElementById('stat-facturas').textContent = numFacts;
+  document.getElementById('stat-facturas-extra').textContent = periodLabel(_state.period);
+  document.getElementById('stat-activos').textContent = activos + '/' + totalVend;
+  document.getElementById('stat-activos-extra').textContent = activos === 0 ? 'nadie conectado' : (activos === 1 ? '1 activo ahora' : activos + ' activos ahora');
+  document.getElementById('stat-premios').textContent = fmt$(premiosPendientes);
+  document.getElementById('stat-premios-extra').textContent = 'Pagados: ' + fmt$(premiosPagados);
+}
+
+function periodLabel(p) {
+  return ({today:'hoy', week:'últimos 7 días', month:'últimos 30 días', all:'histórico'})[p] || '';
+}
+
+// ═══════════════════════════════════════════════════════
+// PRIZE CALCULATIONS (mismo algoritmo que la PWA del vendedor)
+// ═══════════════════════════════════════════════════════
+// Premios oficiales según Reglamento de Lotería Nacional de Panamá
+// Estos son los valores estándar; en index.html los premios se leen de la config del vendedor
+// (que pueden ser distintos si el vendedor opera con su propia tabla)
+const BILLETE_PRIZES_DEFAULT = {
+  exact1st: 2000, exact2nd: 600, exact3rd: 300,
+  pri3_1st: 50, ult3_1st: 50, pri2_1st: 3, ult2_1st: 3, ult1_1st: 1,
+  pri3_2nd: 20, ult3_2nd: 20, ult2_2nd: 2,
+  pri3_3rd: 10, ult3_3rd: 10, ult2_3rd: 1,
+};
+const VIL_PRIZES_DEFAULT = { p1: 14, p2: 3, p3: 2 };
+
+function calcBilletePrize(num, p1, p2, p3) {
+  if (!num || !p1) return 0;
+  num = String(num).padStart(4, '0');
+  p1 = String(p1).padStart(4, '0');
+  p2 = String(p2 || '').padStart(4, '0');
+  p3 = String(p3 || '').padStart(4, '0');
+  const P = BILLETE_PRIZES_DEFAULT;
+
+  // Regla 1: Sumar todos los exactos que coinciden (caso raro: p1=p2=p3=mismo número)
+  let exactSum = 0;
+  let exactHits = 0;
+  if (num === p1) { exactSum += P.exact1st; exactHits++; }
+  if (num === p2) { exactSum += P.exact2nd; exactHits++; }
+  if (num === p3) { exactSum += P.exact3rd; exactHits++; }
+  if (exactHits > 0) return exactSum;
+
+  // Regla 2: Mejor premio dentro de las derivaciones del 1°
+  let best1 = 0;
+  if (num.slice(0,3) === p1.slice(0,3)) best1 = Math.max(best1, P.pri3_1st);
+  if (num.slice(1,4) === p1.slice(1,4)) best1 = Math.max(best1, P.ult3_1st);
+  if (num.slice(0,2) === p1.slice(0,2)) best1 = Math.max(best1, P.pri2_1st);
+  if (num.slice(2,4) === p1.slice(2,4)) best1 = Math.max(best1, P.ult2_1st);
+  if (num.slice(3,4) === p1.slice(3,4)) best1 = Math.max(best1, P.ult1_1st);
+
+  // Mejor premio dentro de las derivaciones del 2°
+  let best2 = 0;
+  if (num.slice(0,3) === p2.slice(0,3)) best2 = Math.max(best2, P.pri3_2nd);
+  if (num.slice(1,4) === p2.slice(1,4)) best2 = Math.max(best2, P.ult3_2nd);
+  if (num.slice(2,4) === p2.slice(2,4)) best2 = Math.max(best2, P.ult2_2nd);
+
+  // Mejor premio dentro de las derivaciones del 3°
+  let best3 = 0;
+  if (num.slice(0,3) === p3.slice(0,3)) best3 = Math.max(best3, P.pri3_3rd);
+  if (num.slice(1,4) === p3.slice(1,4)) best3 = Math.max(best3, P.ult3_3rd);
+  if (num.slice(2,4) === p3.slice(2,4)) best3 = Math.max(best3, P.ult2_3rd);
+
+  // Regla 3: las derivaciones de lugares distintos se suman
+  return best1 + best2 + best3;
+}
+
+function calcVilPrize(num, p1, p2, p3) {
+  if (!num || !p1) return 0;
+  num = String(num).padStart(2, '0');
+  const V = VIL_PRIZES_DEFAULT;
+
+  // Para Chance: solo gana el premio mayor entre los 3 lugares
+  const candidates = [];
+  if (num === String(p1).padStart(4,'0').slice(-2)) candidates.push(V.p1);
+  if (num === String(p2 || '').padStart(4,'0').slice(-2)) candidates.push(V.p2);
+  if (num === String(p3 || '').padStart(4,'0').slice(-2)) candidates.push(V.p3);
+  if (!candidates.length) return 0;
+  return Math.max(...candidates);
+}
+
+// ═══════════════════════════════════════════════════════
+// VENDEDORES PANEL
+// ═══════════════════════════════════════════════════════
+function renderVendedores() {
+  const list = document.getElementById('vendedor-list');
+  if (!_state.vendedores.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">👥</div>No hay vendedores. Crea uno desde admin.</div>';
+    return;
+  }
+  const periodStart = getPeriodStart(_state.period);
+  const html = _state.vendedores.map(v => {
+    const online = isOnline(v);
+    let badge;
+    if (!v.activo) badge = '<span class="badge badge-blocked">🚫 Bloqueado</span>';
+    else if (online) badge = '<span class="badge badge-online">🟢 Activo</span>';
+    else badge = '<span class="badge badge-offline">⚪ Off</span>';
+
+    const lastSeen = v.ultima_actividad ? timeAgo(v.ultima_actividad) : 'nunca';
+    const facts = _state.facturas.filter(f => f.vendedor_id === v.id && (!periodStart || f.fecha >= periodStart));
+    const recaudado = facts.reduce((s,f) => s + (Number(f.total)||0), 0);
+    const sorteosCount = _state.sorteos.filter(s => s.vendedor_id === v.id && (!periodStart || s.fecha_creado >= periodStart)).length;
+
+    return '<div class="vendedor-row ' + (online?'active':'') + (!v.activo?' blocked':'') + '" onclick="openVendedorDetail(' + v.id + ')">'
+      + '<div class="vrow-head">'
+      +   '<div style="flex:1;min-width:0;">'
+      +     '<div class="vrow-name">' + escapeHtml(v.nombre) + ' ' + badge + '</div>'
+      +     '<div class="vrow-meta">'
+      +       '<span>👤 ' + escapeHtml(v.usuario) + '</span>'
+      +       '<span>📜 ' + facts.length + ' factura' + (facts.length!==1?'s':'') + '</span>'
+      +       '<span>🎯 ' + sorteosCount + ' sorteo' + (sorteosCount!==1?'s':'') + '</span>'
+      +       '<span>🕐 ' + escapeHtml(lastSeen) + '</span>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div>'
+      +     '<div class="vrow-amount">' + fmt$(recaudado) + '</div>'
+      +     '<div class="vrow-amount-sub">' + periodLabel(_state.period) + '</div>'
+      +   '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  list.innerHTML = html;
+}
+
+function setPeriod(p) {
+  _state.period = p;
+  document.querySelectorAll('.period-tabs button').forEach(b => {
+    b.classList.toggle('active', b.dataset.period === p);
+  });
+  renderTopStats();
+  renderVendedores();
+  renderRanking();
+}
+
+// ═══════════════════════════════════════════════════════
+// RANKING
+// ═══════════════════════════════════════════════════════
+function renderRanking() {
+  const list = document.getElementById('ranking-list');
+  const periodStart = getPeriodStart(_state.period);
+  const ranking = _state.vendedores.map(v => {
+    const facts = _state.facturas.filter(f => f.vendedor_id === v.id && (!periodStart || f.fecha >= periodStart));
+    const recaudado = facts.reduce((s,f) => s + (Number(f.total)||0), 0);
+    return { v, recaudado, count: facts.length };
+  }).sort((a,b) => b.recaudado - a.recaudado);
+
+  if (!ranking.length || ranking[0].recaudado === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🏆</div>Sin ventas en este período</div>';
+    return;
+  }
+
+  list.innerHTML = ranking.map((r, idx) => {
+    const num = idx + 1;
+    const medalClass = num === 1 ? 'rank-medal-1' : num === 2 ? 'rank-medal-2' : num === 3 ? 'rank-medal-3' : '';
+    const medal = num === 1 ? '🥇' : num === 2 ? '🥈' : num === 3 ? '🥉' : num;
+    return '<div class="rank-row">'
+      + '<div class="rank-num ' + medalClass + '" style="border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:' + (num<=3?'18px':'14px') + ';">' + medal + '</div>'
+      + '<div class="rank-info">'
+      +   '<div class="rank-name">' + escapeHtml(r.v.nombre) + '</div>'
+      +   '<div class="rank-sub">' + r.count + ' factura' + (r.count!==1?'s':'') + '</div>'
+      + '</div>'
+      + '<div class="rank-amount">' + fmt$(r.recaudado) + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// FEED EN VIVO
+// ═══════════════════════════════════════════════════════
+let _lastFeedIds = new Set();
+
+function renderFeed() {
+  const list = document.getElementById('feed-list');
+  const top30 = _state.facturas.slice(0, 30);
+  if (!top30.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📜</div>No hay facturas todavía</div>';
+    _lastFeedIds = new Set();
+    return;
+  }
+  const vendById = {};
+  _state.vendedores.forEach(v => vendById[v.id] = v);
+  const newIds = new Set();
+  list.innerHTML = top30.map(f => {
+    const isNew = !_lastFeedIds.has(f.id);
+    if (isNew && _lastFeedIds.size > 0) newIds.add(f.id);
+    const v = vendById[f.vendedor_id];
+    const vName = v ? v.nombre : '?';
+    return '<div class="feed-row' + (newIds.has(f.id) ? ' new' : '') + '" onclick="openFacturaDetail(' + f.id + ')" style="cursor:pointer;">'
+      + '<div class="feed-time">' + timeAgo(f.fecha) + '</div>'
+      + '<div class="feed-vend" title="' + escapeHtml(vName) + '">' + escapeHtml(vName) + '</div>'
+      + '<div class="feed-fid">' + escapeHtml(f.factura_local_id) + '</div>'
+      + '<div class="feed-amount">' + fmt$(f.total) + '</div>'
+      + (f.paid ? '<div class="feed-paid-badge">PAGADA</div>' : '')
+      + '</div>';
+    _lastFeedIds.add(f.id);
+  }).join('');
+  // Update tracking
+  _lastFeedIds = new Set(top30.map(f => f.id));
+}
+
+// ═══════════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════════
+function doSearch() {
+  const q = (document.getElementById('search-input').value || '').trim().toLowerCase();
+  const results = document.getElementById('search-results');
+  if (!q) {
+    results.innerHTML = '<div class="empty">Escribe arriba para buscar</div>';
+    return;
+  }
+  const vendById = {};
+  _state.vendedores.forEach(v => vendById[v.id] = v);
+  const matches = _state.facturas.filter(f => {
+    if ((f.factura_local_id || '').toLowerCase().includes(q)) return true;
+    // Buscar dentro de items por número
+    if ((f.items || []).some(it => String(it.number||'').toLowerCase().includes(q))) return true;
+    return false;
+  }).slice(0, 50);
+  if (!matches.length) {
+    results.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>Sin resultados para "' + escapeHtml(q) + '"</div>';
+    return;
+  }
+  results.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">' + matches.length + ' resultado' + (matches.length!==1?'s':'') + '</div>'
+    + matches.map(f => {
+    const v = vendById[f.vendedor_id];
+    const vName = v ? v.nombre : '?';
+    return '<div class="feed-row" onclick="openFacturaDetail(' + f.id + ')" style="cursor:pointer;">'
+      + '<div class="feed-time">' + timeAgo(f.fecha) + '</div>'
+      + '<div class="feed-vend">' + escapeHtml(vName) + '</div>'
+      + '<div class="feed-fid">' + escapeHtml(f.factura_local_id) + '</div>'
+      + '<div class="feed-amount">' + fmt$(f.total) + '</div>'
+      + (f.paid ? '<div class="feed-paid-badge">PAGADA</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// MODAL: DETALLE DE VENDEDOR
+// ═══════════════════════════════════════════════════════
+let _vdCtx = null;
+
+function openVendedorDetail(vendedorId) {
+  const v = _state.vendedores.find(x => x.id === vendedorId);
+  if (!v) return;
+  _vdCtx = { vendedorId, tab: 'sorteos' };
+  document.getElementById('vd-title').textContent = v.nombre;
+  const online = isOnline(v);
+  const status = online ? '<span style="color:var(--green);">🟢 Activo ahora</span>' : (v.activo ? '⚪ Off · ' + timeAgo(v.ultima_actividad) : '🚫 Bloqueado');
+  document.getElementById('vd-sub').innerHTML = '👤 ' + escapeHtml(v.usuario) + (v.telefono ? ' · 📞 ' + escapeHtml(v.telefono) : '') + ' · ' + status;
+  renderVendedorStats(v);
+  setDetailTab('sorteos');
+  document.getElementById('vendedor-detail-modal').classList.add('open');
+}
+function closeVendedorDetail() {
+  document.getElementById('vendedor-detail-modal').classList.remove('open');
+  _vdCtx = null;
+}
+
+function renderVendedorStats(v) {
+  const facts = _state.facturas.filter(f => f.vendedor_id === v.id);
+  const today = facts.filter(f => f.fecha >= getPeriodStart('today'));
+  const week = facts.filter(f => f.fecha >= getPeriodStart('week'));
+  const month = facts.filter(f => f.fecha >= getPeriodStart('month'));
+  const total = facts.reduce((s,f) => s + (Number(f.total)||0), 0);
+  const tHoy = today.reduce((s,f) => s + (Number(f.total)||0), 0);
+  const tSem = week.reduce((s,f) => s + (Number(f.total)||0), 0);
+  const tMes = month.reduce((s,f) => s + (Number(f.total)||0), 0);
+  document.getElementById('vd-stats').innerHTML =
+      '<div class="detail-stat"><div class="detail-stat-label">Hoy</div><div class="detail-stat-value">' + fmt$(tHoy) + '</div></div>'
+    + '<div class="detail-stat"><div class="detail-stat-label">Esta semana</div><div class="detail-stat-value">' + fmt$(tSem) + '</div></div>'
+    + '<div class="detail-stat"><div class="detail-stat-label">Este mes</div><div class="detail-stat-value">' + fmt$(tMes) + '</div></div>'
+    + '<div class="detail-stat"><div class="detail-stat-label">Total histórico</div><div class="detail-stat-value">' + fmt$(total) + '</div></div>'
+    + '<div class="detail-stat"><div class="detail-stat-label">Facturas</div><div class="detail-stat-value">' + facts.length + '</div></div>'
+    + '<div class="detail-stat"><div class="detail-stat-label">Sorteos</div><div class="detail-stat-value">' + _state.sorteos.filter(s=>s.vendedor_id===v.id).length + '</div></div>';
+}
+
+function setDetailTab(tab) {
+  if (!_vdCtx) return;
+  _vdCtx.tab = tab;
+  ['sorteos','facturas','ganadores'].forEach(t => {
+    document.getElementById('vd-tab-' + t).classList.toggle('active', t === tab);
+  });
+  renderDetailContent();
+}
+
+function renderDetailContent() {
+  if (!_vdCtx) return;
+  const v = _state.vendedores.find(x => x.id === _vdCtx.vendedorId);
+  if (!v) return;
+  const content = document.getElementById('vd-content');
+  if (_vdCtx.tab === 'sorteos') {
+    const sorteos = _state.sorteos.filter(s => s.vendedor_id === v.id);
+    if (!sorteos.length) { content.innerHTML = '<div class="empty">Sin sorteos</div>'; return; }
+    content.innerHTML = sorteos.map(s => {
+      const facts = _state.facturas.filter(f => f.sorteo_id === s.id);
+      const total = facts.reduce((sum,f) => sum + (Number(f.total)||0), 0);
+      const status = s.closed ? '🔒 Cerrado' : '🟢 Activo';
+      const fechaStr = s.fecha_juego ? new Date(s.fecha_juego).toLocaleDateString('es-PA') : '—';
+      return '<div class="item-row">'
+        + '<div class="item-row-head">'
+        +   '<div><div class="item-row-title">' + escapeHtml(s.label || ('Sorteo ' + s.sorteo_local_id)) + '</div>'
+        +   '<div class="item-row-sub">' + status + ' · ' + fechaStr + ' · ' + facts.length + ' factura' + (facts.length!==1?'s':'') + '</div></div>'
+        +   '<div style="font-family:\'DM Mono\',monospace;font-weight:700;color:var(--gold);">' + fmt$(total) + '</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  } else if (_vdCtx.tab === 'facturas') {
+    const facts = _state.facturas.filter(f => f.vendedor_id === v.id).slice(0, 100);
+    if (!facts.length) { content.innerHTML = '<div class="empty">Sin facturas</div>'; return; }
+    content.innerHTML = facts.map(f => {
+      const itemCount = (f.items || []).length;
+      return '<div class="item-row" style="cursor:pointer;" onclick="openFacturaDetail(' + f.id + ')">'
+        + '<div class="item-row-head">'
+        +   '<div><div class="item-row-title">' + escapeHtml(f.factura_local_id) + ' ' + (f.paid ? '<span class="feed-paid-badge">PAGADA</span>' : '') + '</div>'
+        +   '<div class="item-row-sub">' + new Date(f.fecha).toLocaleString('es-PA') + ' · ' + itemCount + ' item' + (itemCount!==1?'s':'') + '</div></div>'
+        +   '<div style="font-family:\'DM Mono\',monospace;font-weight:700;color:var(--gold);">' + fmt$(f.total) + '</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  } else if (_vdCtx.tab === 'ganadores') {
+    // Para cada sorteo cerrado con ganadores, mostrar facturas ganadoras
+    const closedSorteos = _state.sorteos.filter(s => s.vendedor_id === v.id && s.closed && s.winners && s.winners.p1);
+    if (!closedSorteos.length) { content.innerHTML = '<div class="empty">No hay sorteos cerrados con ganadores</div>'; return; }
+    let html = '';
+    closedSorteos.forEach(s => {
+      const facts = _state.facturas.filter(f => f.sorteo_id === s.id);
+      const winners = [];
+      facts.forEach(f => {
+        let total = 0;
+        (f.items || []).forEach(it => {
+          let p = 0;
+          if (it.type === 'billete') p = calcBilletePrize(it.number, s.winners.p1, s.winners.p2, s.winners.p3);
+          else if (it.type === 'vil') p = calcVilPrize(it.number, s.winners.p1, s.winners.p2, s.winners.p3);
+          if (p > 0) total += p * (it.qty||0);
+        });
+        if (total > 0) winners.push({ f, total });
+      });
+      if (!winners.length) return;
+      const totalPagar = winners.reduce((sum,w) => sum + w.total, 0);
+      const totalPagado = winners.filter(w => w.f.paid).reduce((sum,w) => sum + Number(w.f.paid_amount || w.total), 0);
+      html += '<div class="item-row">'
+        + '<div style="font-weight:600;font-size:13px;margin-bottom:6px;">' + escapeHtml(s.label || s.sorteo_local_id) + '</div>'
+        + '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:8px;">'
+        +   '<span>Total a pagar: <strong style="color:var(--gold);">' + fmt$(totalPagar) + '</strong></span>'
+        +   '<span>Pagado: <strong style="color:var(--green);">' + fmt$(totalPagado) + '</strong></span>'
+        + '</div>';
+      winners.forEach(w => {
+        html += '<div onclick="openFacturaDetail(' + w.f.id + ')" style="cursor:pointer;display:flex;justify-content:space-between;padding:6px 8px;background:var(--surface);border-radius:6px;margin-bottom:4px;font-size:12px;">'
+          + '<span>' + escapeHtml(w.f.factura_local_id) + ' ' + (w.f.paid ? '<span class="feed-paid-badge">✓</span>' : '⏳') + '</span>'
+          + '<span style="font-family:\'DM Mono\',monospace;font-weight:700;color:' + (w.f.paid?'var(--green)':'var(--gold)') + ';">' + fmt$(w.total) + '</span>'
+          + '</div>';
+      });
+      html += '</div>';
+    });
+    content.innerHTML = html || '<div class="empty">No hay facturas ganadoras</div>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// MODAL: DETALLE DE FACTURA
+// ═══════════════════════════════════════════════════════
+function openFacturaDetail(facturaId) {
+  const f = _state.facturas.find(x => x.id === facturaId);
+  if (!f) return;
+  const v = _state.vendedores.find(x => x.id === f.vendedor_id);
+  const s = _state.sorteos.find(x => x.id === f.sorteo_id);
+  document.getElementById('fd-title').textContent = f.factura_local_id;
+  document.getElementById('fd-sub').innerHTML = (v ? '👤 ' + escapeHtml(v.nombre) : '') + ' · ' + new Date(f.fecha).toLocaleString('es-PA') + (s ? ' · ' + escapeHtml(s.label || s.sorteo_local_id) : '');
+
+  // Calc winning items if applicable
+  let winningTotal = 0;
+  const winningItems = [];
+  if (s && s.closed && s.winners && s.winners.p1) {
+    (f.items || []).forEach(it => {
+      let p = 0;
+      if (it.type === 'billete') p = calcBilletePrize(it.number, s.winners.p1, s.winners.p2, s.winners.p3);
+      else if (it.type === 'vil') p = calcVilPrize(it.number, s.winners.p1, s.winners.p2, s.winners.p3);
+      if (p > 0) {
+        winningItems.push({ ...it, prize: p, prizeTotal: p * (it.qty||0) });
+        winningTotal += p * (it.qty||0);
+      }
+    });
+  }
+
+  let html = '';
+  if (winningTotal > 0) {
+    html += '<div style="background:var(--gold-soft);border:1px solid rgba(184,134,11,0.3);border-radius:10px;padding:12px;margin-bottom:12px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+      +   '<span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Premio</span>'
+      +   '<span style="font-family:\'DM Serif Display\',serif;font-size:22px;color:var(--gold);">' + fmt$(winningTotal) + '</span>'
+      + '</div>'
+      + '<div style="font-size:11px;color:' + (f.paid?'var(--green)':'var(--red)') + ';margin-top:4px;text-align:right;font-weight:600;">'
+      +   (f.paid ? '✓ Pagada' + (f.paid_at ? ' el ' + new Date(f.paid_at).toLocaleDateString('es-PA') : '') : '⏳ Pendiente de pago')
+      + '</div></div>';
+  }
+  html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;">'
+    + '<span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Total factura</span>'
+    + '<span style="font-family:\'DM Serif Display\',serif;font-size:20px;color:var(--gold);">' + fmt$(f.total) + '</span>'
+    + '</div>';
+
+  html += '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Items</div>';
+  html += (f.items || []).map(it => {
+    const isW = winningItems.find(wi => wi.number === it.number && wi.type === it.type);
+    const prizeTotal = isW ? (isW.prize * it.qty) : 0;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:' + (isW ? 'var(--green-soft)' : 'var(--surface2)') + ';border:1px solid ' + (isW ? 'rgba(45,154,58,0.3)' : 'var(--border)') + ';border-radius:8px;margin-bottom:6px;">'
+      + '<div style="display:flex;align-items:center;gap:8px;">'
+      +   '<span style="font-family:\'DM Mono\',monospace;font-weight:700;">#' + escapeHtml(it.number) + '</span>'
+      +   '<span style="font-size:10px;background:' + (it.type==='vil'?'rgba(122,78,196,0.15)':'rgba(184,134,11,0.15)') + ';color:' + (it.type==='vil'?'var(--purple)':'var(--gold)') + ';padding:2px 6px;border-radius:4px;font-weight:600;">' + (it.type==='vil'?'CHANCE':'BILLETE') + '</span>'
+      +   '<span style="font-size:11px;color:var(--muted);">×' + it.qty + '</span>'
+      + '</div>'
+      + '<div style="text-align:right;">'
+      +   '<div style="font-size:12px;color:var(--muted);">' + fmt$(it.total) + '</div>'
+      +   (isW ? '<div style="font-size:12px;color:var(--green);font-weight:700;">🏆 +' + fmt$(prizeTotal) + '</div>' : '')
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  document.getElementById('fd-content').innerHTML = html;
+  document.getElementById('factura-detail-modal').classList.add('open');
+}
+function closeFacturaDetail() {
+  document.getElementById('factura-detail-modal').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════
+// REALTIME + REFRESH
+// ═══════════════════════════════════════════════════════
+let _refreshInterval = null;
+let _realtimeChannel = null;
+
+function startApp() {
+  loadAll();
+  // Refresh every 15 seconds (UI re-renders even without data changes, to update "ago" times)
+  if (_refreshInterval) clearInterval(_refreshInterval);
+  _refreshInterval = setInterval(loadAll, 15000);
+
+  // Subscribe to realtime updates
+  try {
+    _realtimeChannel = sb.channel('central-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'facturas' }, () => loadAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sorteos' }, () => loadAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vendedores' }, () => loadAll())
+      .subscribe();
+  } catch (e) {
+    console.warn('Realtime no disponible:', e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// TABS DE NAVEGACIÓN (Resumen / Análisis / Histórico)
+// ═══════════════════════════════════════════════════════
+let _centralTab = 'resumen';
+
+function setCentralTab(tab) {
+  _centralTab = tab;
+  // Mostrar/ocultar contenedores
+  document.getElementById('tab-resumen').style.display = tab === 'resumen' ? '' : 'none';
+  document.getElementById('tab-analisis').style.display = tab === 'analisis' ? '' : 'none';
+  document.getElementById('tab-historial').style.display = tab === 'historial' ? '' : 'none';
+  // Estilo de los botones
+  document.querySelectorAll('.ctab-btn').forEach(b => {
+    const isActive = b.dataset.ctab === tab;
+    b.classList.toggle('active', isActive);
+    if (isActive) {
+      b.style.background = 'var(--gold)';
+      b.style.color = '#fff';
+    } else {
+      b.style.background = 'transparent';
+      b.style.color = 'var(--text)';
+    }
+  });
+  // Render del tab activado
+  if (tab === 'analisis') renderAnalysis();
+  if (tab === 'historial') renderHistorial();
+}
+
+// ═══════════════════════════════════════════════════════
+// ANÁLISIS (gráficas + comparativas)
+// ═══════════════════════════════════════════════════════
+let _analysisPeriod = 'today';
+let _analysisVendedorId = 'all';
+let _charts = {}; // referencias a las instancias de Chart.js (para destruirlas al re-render)
+
+function setAnalysisPeriod(p) {
+  _analysisPeriod = p;
+  document.querySelectorAll('[data-aperiod]').forEach(b => {
+    b.classList.toggle('active', b.dataset.aperiod === p);
+  });
+  renderAnalysis();
+}
+
+function populateAnalysisVendedorSelect() {
+  const sel = document.getElementById('analysis-vendedor-select');
+  if (!sel) return;
+  const current = sel.value || 'all';
+  // Reconstruir opciones
+  const options = ['<option value="all">🌍 Todos los vendedores (vista global)</option>']
+    .concat(_state.vendedores.map(v => '<option value="' + v.id + '">👤 ' + escapeHtml(v.nombre) + '</option>'));
+  sel.innerHTML = options.join('');
+  // Restaurar selección
+  sel.value = current;
+  if (sel.value !== current) sel.value = 'all'; // por si el id ya no existe
+  _analysisVendedorId = sel.value;
+}
+
+function getAnalysisData() {
+  // Obtener facturas y sorteos filtrados por vendedor + período
+  const periodStart = getPeriodStart(_analysisPeriod);
+  let facts = _state.facturas;
+  if (_analysisVendedorId !== 'all') {
+    const vid = parseInt(_analysisVendedorId, 10);
+    facts = facts.filter(f => f.vendedor_id === vid);
+  }
+  if (periodStart) facts = facts.filter(f => f.fecha >= periodStart);
+  return { facts, periodStart };
+}
+
+function renderAnalysis() {
+  // Sincronizar selector con state actual
+  const sel = document.getElementById('analysis-vendedor-select');
+  if (sel) _analysisVendedorId = sel.value;
+
+  const { facts } = getAnalysisData();
+
+  renderAnalysisTopStats(facts);
+  renderChartSalesByDay(facts);
+  renderChartTipo(facts);
+  renderChartHoras(facts);
+  renderChartVendedores();
+}
+
+function renderAnalysisTopStats(facts) {
+  const total = facts.reduce((s,f) => s + (Number(f.total)||0), 0);
+  const numFacts = facts.length;
+  const avg = numFacts > 0 ? total / numFacts : 0;
+  // Items totales (suma de cantidades)
+  let itemsTotal = 0;
+  facts.forEach(f => {
+    (f.items || []).forEach(it => { itemsTotal += Number(it.qty) || 0; });
+  });
+  const html =
+      '<div class="stat-card"><div class="stat-label">Total recaudado</div><div class="stat-value">' + fmt$(total) + '</div><div class="stat-extra">' + periodLabel(_analysisPeriod) + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">Facturas</div><div class="stat-value">' + numFacts + '</div><div class="stat-extra">' + periodLabel(_analysisPeriod) + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">Promedio</div><div class="stat-value">' + fmt$(avg) + '</div><div class="stat-extra">por factura</div></div>'
+    + '<div class="stat-card"><div class="stat-label">Items vendidos</div><div class="stat-value">' + itemsTotal + '</div><div class="stat-extra">' + periodLabel(_analysisPeriod) + '</div></div>';
+  document.getElementById('analysis-top-stats').innerHTML = html;
+}
+
+// ─── Gráfica: ventas por día ─────────────────────────
+function renderChartSalesByDay(facts) {
+  // Agrupar por día (YYYY-MM-DD)
+  const buckets = {};
+  facts.forEach(f => {
+    if (!f.fecha) return;
+    const day = String(f.fecha).slice(0, 10);
+    buckets[day] = (buckets[day] || 0) + (Number(f.total) || 0);
+  });
+  // Si "today", mostrar últimas 24 horas por hora; si no, últimos N días
+  let labels = [];
+  let data = [];
+  if (_analysisPeriod === 'today') {
+    // 24 horas, pero sólo de hoy
+    const now = new Date();
+    const dayStr = now.toISOString().slice(0,10);
+    const hourBuckets = {};
+    facts.forEach(f => {
+      if (!f.fecha) return;
+      const d = new Date(f.fecha);
+      const h = d.getHours();
+      hourBuckets[h] = (hourBuckets[h] || 0) + (Number(f.total) || 0);
+    });
+    for (let h = 0; h < 24; h++) {
+      labels.push(String(h).padStart(2,'0') + ':00');
+      data.push(hourBuckets[h] || 0);
+    }
+  } else {
+    // Últimos N días según período
+    const numDays = _analysisPeriod === 'week' ? 7 : (_analysisPeriod === 'month' ? 30 : 90);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    for (let i = numDays - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0,10);
+      labels.push(d.toLocaleDateString('es-PA', {month:'short', day:'numeric'}));
+      data.push(buckets[key] || 0);
+    }
+  }
+  drawChart('chart-sales-by-day', 'line', {
+    labels,
+    datasets: [{
+      label: 'Recaudado',
+      data,
+      borderColor: '#b8860b',
+      backgroundColor: 'rgba(184, 134, 11, 0.15)',
+      borderWidth: 2,
+      fill: true,
+      tension: 0.3,
+      pointRadius: 3,
+      pointBackgroundColor: '#b8860b',
+    }]
+  }, {
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => 'Recaudado: ' + fmt$(ctx.parsed.y)
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { callback: v => '$' + v }
+      }
+    }
+  });
+}
+
+// ─── Gráfica: distribución Chance vs Billete ─────────
+function renderChartTipo(facts) {
+  let chance = 0, billete = 0;
+  let chanceFacts = 0, billeteFacts = 0;
+  facts.forEach(f => {
+    let hasChance = false, hasBillete = false;
+    (f.items || []).forEach(it => {
+      const v = Number(it.total) || 0;
+      if (it.type === 'vil') { chance += v; hasChance = true; }
+      else if (it.type === 'billete') { billete += v; hasBillete = true; }
+    });
+    if (hasChance) chanceFacts++;
+    if (hasBillete) billeteFacts++;
+  });
+  drawChart('chart-tipo', 'doughnut', {
+    labels: ['Chance', 'Billete'],
+    datasets: [{
+      data: [chance, billete],
+      backgroundColor: ['#7a4ec4', '#b8860b'],
+      borderWidth: 0,
+    }]
+  }, {
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: {
+        callbacks: {
+          label: ctx => ctx.label + ': ' + fmt$(ctx.parsed)
+        }
+      }
+    },
+    cutout: '60%',
+  });
+  const total = chance + billete;
+  const pctChance = total > 0 ? (chance / total * 100).toFixed(1) : 0;
+  const pctBillete = total > 0 ? (billete / total * 100).toFixed(1) : 0;
+  document.getElementById('chart-tipo-legend').innerHTML =
+      '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:#7a4ec4;font-weight:600;">● Chance</span><span>' + fmt$(chance) + ' · ' + pctChance + '%</span></div>'
+    + '<div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:#b8860b;font-weight:600;">● Billete</span><span>' + fmt$(billete) + ' · ' + pctBillete + '%</span></div>';
+}
+
+// ─── Gráfica: horarios pico (24h) ────────────────────
+function renderChartHoras(facts) {
+  const hourBuckets = new Array(24).fill(0);
+  facts.forEach(f => {
+    if (!f.fecha) return;
+    const h = new Date(f.fecha).getHours();
+    hourBuckets[h] += Number(f.total) || 0;
+  });
+  const labels = [];
+  for (let h = 0; h < 24; h++) labels.push(String(h).padStart(2,'0'));
+  drawChart('chart-horas', 'bar', {
+    labels,
+    datasets: [{
+      label: 'Recaudado',
+      data: hourBuckets,
+      backgroundColor: hourBuckets.map(v => {
+        // Color más intenso para horas con más ventas
+        const max = Math.max(...hourBuckets, 1);
+        const intensity = v / max;
+        return 'rgba(184, 134, 11, ' + (0.3 + intensity * 0.7) + ')';
+      }),
+      borderRadius: 4,
+    }]
+  }, {
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => fmt$(ctx.parsed.y) + ' a las ' + ctx.label + 'h'
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { callback: v => '$' + v }
+      }
+    }
+  });
+}
+
+// ─── Gráfica: comparativa entre vendedores (solo modo "Todos") ─────
+function renderChartVendedores() {
+  const panel = document.getElementById('panel-comparativa');
+  // Sólo se muestra si está en modo "Todos"
+  if (_analysisVendedorId !== 'all') {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = '';
+  const periodStart = getPeriodStart(_analysisPeriod);
+  const data = _state.vendedores.map(v => {
+    const facts = _state.facturas.filter(f => f.vendedor_id === v.id && (!periodStart || f.fecha >= periodStart));
+    return {
+      nombre: v.nombre,
+      recaudado: facts.reduce((s,f) => s + (Number(f.total)||0), 0)
+    };
+  }).sort((a,b) => b.recaudado - a.recaudado);
+
+  drawChart('chart-vendedores', 'bar', {
+    labels: data.map(d => d.nombre),
+    datasets: [{
+      label: 'Recaudado',
+      data: data.map(d => d.recaudado),
+      backgroundColor: 'rgba(45, 154, 58, 0.7)',
+      borderRadius: 6,
+    }]
+  }, {
+    indexAxis: 'y', // barras horizontales
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => 'Recaudado: ' + fmt$(ctx.parsed.x)
+        }
+      }
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        ticks: { callback: v => '$' + v }
+      }
+    }
+  });
+}
+
+// Helper: construir o actualizar un chart, destruyendo el anterior si existía
+function drawChart(canvasId, type, data, options) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  if (typeof Chart === 'undefined') {
+    canvas.parentElement.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>Librería de gráficas no disponible (sin internet).</div>';
+    return;
+  }
+  // Destruir instancia previa si existe
+  if (_charts[canvasId]) {
+    try { _charts[canvasId].destroy(); } catch(e){}
+  }
+  _charts[canvasId] = new Chart(canvas, {
+    type,
+    data,
+    options: Object.assign({
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 600 },
+    }, options || {})
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// HISTÓRICO DE SORTEOS CERRADOS
+// ═══════════════════════════════════════════════════════
+function populateHistorialVendedorFilter() {
+  const sel = document.getElementById('hist-vendedor-filter');
+  if (!sel) return;
+  const current = sel.value || 'all';
+  sel.innerHTML = '<option value="all">Todos los vendedores</option>'
+    + _state.vendedores.map(v => '<option value="' + v.id + '">' + escapeHtml(v.nombre) + '</option>').join('');
+  sel.value = current;
+  if (sel.value !== current) sel.value = 'all';
+}
+
+function renderHistorial() {
+  const list = document.getElementById('historial-list');
+  const sel = document.getElementById('hist-vendedor-filter');
+  const filterVid = sel ? sel.value : 'all';
+
+  let sorteos = _state.sorteos.filter(s => s.closed);
+  if (filterVid !== 'all') {
+    const vid = parseInt(filterVid, 10);
+    sorteos = sorteos.filter(s => s.vendedor_id === vid);
+  }
+  // Ordenar por fecha de juego o creación, más recientes primero
+  sorteos.sort((a, b) => {
+    const ad = a.fecha_juego || a.fecha_creado || '';
+    const bd = b.fecha_juego || b.fecha_creado || '';
+    return bd.localeCompare(ad);
+  });
+
+  if (!sorteos.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📅</div>No hay sorteos cerrados todavía</div>';
+    return;
+  }
+
+  const vendById = {};
+  _state.vendedores.forEach(v => vendById[v.id] = v);
+
+  list.innerHTML = sorteos.map(s => {
+    const facts = _state.facturas.filter(f => f.sorteo_id === s.id);
+    const total = facts.reduce((sum, f) => sum + (Number(f.total) || 0), 0);
+    const vName = vendById[s.vendedor_id] ? vendById[s.vendedor_id].nombre : '?';
+    const fechaStr = s.fecha_juego ? new Date(s.fecha_juego).toLocaleDateString('es-PA', { weekday:'long', day:'numeric', month:'short', year:'numeric' }) : '—';
+
+    // Calcular ganadores y premios pendientes
+    let winners = 0;
+    let totalPremio = 0;
+    let totalPagado = 0;
+    if (s.winners && s.winners.p1) {
+      facts.forEach(f => {
+        let prize = 0;
+        (f.items || []).forEach(it => {
+          let p = 0;
+          if (it.type === 'billete') p = calcBilletePrize(it.number, s.winners.p1, s.winners.p2, s.winners.p3);
+          else if (it.type === 'vil') p = calcVilPrize(it.number, s.winners.p1, s.winners.p2, s.winners.p3);
+          if (p > 0) prize += p * (it.qty || 0);
+        });
+        if (prize > 0) {
+          winners++;
+          totalPremio += prize;
+          if (f.paid) totalPagado += Number(f.paid_amount || prize);
+        }
+      });
+    }
+    const pendiente = totalPremio - totalPagado;
+
+    const winnersInfo = s.winners && s.winners.p1
+      ? '<div style="display:flex;gap:14px;font-size:11px;color:var(--muted);margin-top:8px;flex-wrap:wrap;">'
+        + '<span>🥇 ' + escapeHtml(s.winners.p1) + '</span>'
+        + (s.winners.p2 ? '<span>🥈 ' + escapeHtml(s.winners.p2) + '</span>' : '')
+        + (s.winners.p3 ? '<span>🥉 ' + escapeHtml(s.winners.p3) + '</span>' : '')
+        + '</div>'
+      : '<div style="font-size:11px;color:var(--muted);margin-top:8px;">Sin números ganadores ingresados</div>';
+
+    return '<div class="item-row" style="padding:14px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px;">'
+      +   '<div style="flex:1;min-width:0;">'
+      +     '<div style="font-family:\'DM Serif Display\',serif;font-size:16px;color:var(--text);">' + escapeHtml(s.label || ('Sorteo ' + s.sorteo_local_id)) + '</div>'
+      +     '<div style="font-size:11px;color:var(--muted);margin-top:2px;">'
+      +       '👤 ' + escapeHtml(vName) + ' · 📅 ' + escapeHtml(fechaStr)
+      +     '</div>'
+      +   '</div>'
+      +   '<div style="text-align:right;">'
+      +     '<div style="font-family:\'DM Mono\',monospace;font-weight:700;font-size:18px;color:var(--gold);">' + fmt$(total) + '</div>'
+      +     '<div style="font-size:11px;color:var(--muted);">' + facts.length + ' factura' + (facts.length!==1?'s':'') + '</div>'
+      +   '</div>'
+      + '</div>'
+      + winnersInfo
+      + (s.winners && s.winners.p1
+        ? '<div style="display:flex;gap:14px;font-size:11px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);flex-wrap:wrap;">'
+          + '<span>🏆 <strong style="color:var(--gold);">' + winners + '</strong> ganadora' + (winners!==1?'s':'') + '</span>'
+          + '<span>💰 Total premio: <strong>' + fmt$(totalPremio) + '</strong></span>'
+          + '<span style="color:var(--green);">✓ Pagado: <strong>' + fmt$(totalPagado) + '</strong></span>'
+          + (pendiente > 0 ? '<span style="color:var(--red);">⏳ Pendiente: <strong>' + fmt$(pendiente) + '</strong></span>' : '')
+          + '</div>'
+        : '')
+      + '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+checkAuthOnLoad();
+</script>
+
+</body>
+</html>
